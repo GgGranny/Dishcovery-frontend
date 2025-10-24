@@ -1,0 +1,209 @@
+:root {
+  --primary-50: #f0fdf4;
+  --primary-100: #dcfce7;
+  --primary-500: #22c55e;
+  --primary-600: #16a34a;
+  --primary-700: #15803d;
+  --primary-900: #14532d;
+  --gray-100: #f8fafc;
+  --gray-200: #e2e8f0;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --white: #ffffff;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --radius: 20px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* ===== Page Background ===== */
+.signup-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: 
+    linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
+    url("../assets/login-bg.png") center/cover no-repeat;
+  overflow: hidden;
+}
+
+/* ===== Container ===== */
+.signup-container {
+  position: relative;
+  z-index: 1;
+  background: #ffffffd9;
+  border-radius: var(--radius);
+  padding: 40px 50px;
+  width: 490px;
+  color: #222;
+  box-shadow: var(--shadow);
+}
+
+/* ===== Header ===== */
+.signup-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.signup-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--primary-900);
+}
+
+.signup-subtitle {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+/* ===== Input Fields ===== */
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #222;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 1.1rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: #fff;
+  color: #222;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.form-input::placeholder {
+  color: #999;
+}
+
+.form-input:focus {
+  border-color: var(--primary-500);
+  outline: 2px solid var(--primary-500);
+}
+
+/* ===== Button ===== */
+.auth-submit-btn {
+  width: 100%;
+  background: var(--primary-500);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auth-submit-btn:hover {
+  background: var(--primary-600);
+}
+
+.auth-btn-disabled {
+  background: #ccc !important;
+  cursor: not-allowed;
+}
+
+/* ===== Divider ===== */
+.login-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #ccc;
+  margin: 0 10px;
+}
+
+/* ===== Google Button ===== */
+.google-auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: #fff;
+  color: #222;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.google-auth-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.google-icon {
+  font-size: 1.2rem;
+  color: var(--primary-500);
+}
+
+/* ===== Footer ===== */
+.signup-footer {
+  margin-top: 25px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #222;
+}
+
+.signup-footer a {
+  color: var(--primary-500);
+  text-decoration: none;
+}
+
+.signup-footer a:hover {
+  color: var(--primary-700);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  .signup-container {
+    padding: 25px 20px;
+    width: 90%;
+  }
+}

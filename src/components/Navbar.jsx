@@ -1,6 +1,7 @@
 import React from 'react';
 import '../css/Navbar.css';
-import logo from '../assets/logo.png'; 
+import logo from '../assets/logo.png';
+import { NavLink } from 'react-router-dom';
 
 const Navbar = () => {
   return (
@@ -12,21 +13,24 @@ const Navbar = () => {
         </div>
 
         <nav className="nav">
-          <a href="#" className="nav-link">Home</a>
-          <a href="#" className="nav-link">Recipes</a>
-          <a href="#" className="nav-link">Categories</a>
-          <a href="#" className="nav-link">Community</a>
-          <a href="#" className="nav-link">About</a>
+          <NavLink to="/" className="nav-link">Home</NavLink>
+          <NavLink to="/recipes" className="nav-link">Recipes</NavLink>
+          <NavLink to="/categories" className="nav-link">Categories</NavLink>
+          <NavLink to="/community" className="nav-link">Community</NavLink>
+          <NavLink to="/about" className="nav-link">About</NavLink>
         </nav>
 
         <div className="search-container">
-          <input 
-            type="text" 
-            placeholder="Search recipes..." 
+          <input
+            type="text"
+            placeholder="Search recipes..."
             className="search-input"
           />
           <button className="create-btn">Create</button>
-          <button className="login-btn">Login</button>
+
+          <NavLink to="/login">
+            <button className="login-btn">Login</button>
+          </NavLink>
         </div>
       </div>
     </header>
