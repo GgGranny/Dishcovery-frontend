@@ -1,13 +1,15 @@
 import Landing from "./frontend/Landing";
+import UploadVideo from "./frontend/Upload";
 
 
 
 
-function App(){
+function App() {
 
-  return(
+  return (
 
-  <Landing/>
+    // <Landing/>
+    <UploadVideo />
 
   );
 }
