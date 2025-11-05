@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiUser, FiMail, FiLock } from "react-icons/fi";
 import "../css/Signup.css";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false); 
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -13,15 +14,20 @@ const Signup = () => {
     confirmPassword: "",
   });
 
+  const navigate = useNavigate();
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword)
+
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+      alert("Please fill out all fields.");
       return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
@@ -29,11 +35,42 @@ const Signup = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 2000);
+
+    try {
+      const response = await fetch("http://localhost:8080/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("✅ Signup Response:", data);
+
+      if (response.ok) {
+       
+        setShowSuccessModal(true);
+      } else {
+        alert(data.message || "Signup failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("❌ Error during signup:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignup = () => {
     console.log("Google signup clicked");
+  };
+
+  const handleModalClose = () => {
+    setShowSuccessModal(false);
+    navigate("/"); 
   };
 
   const isFormValid =
@@ -46,15 +83,12 @@ const Signup = () => {
   return (
     <div className="signup-page">
       <div className="signup-container">
-
         <div className="signup-header">
           <h1 className="signup-title">Create Account</h1>
           <p className="signup-subtitle">Sign up to get started with your account</p>
         </div>
 
         <form className="signup-form" onSubmit={handleSignup}>
-
-          {/* Username Field */}
           <div className="input-group">
             <label className="input-label">Username</label>
             <div className="input-wrapper">
@@ -150,6 +184,19 @@ const Signup = () => {
           Already have an account? <NavLink to="/login">Sign in</NavLink>
         </div>
       </div>
+
+   
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>Signup Successful </h2>
+            <p>Your account has been created successfully.</p>
+            <button className="modal-ok-btn" onClick={handleModalClose}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

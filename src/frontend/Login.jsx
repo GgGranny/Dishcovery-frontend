@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom"; // ✅ import NavLink
+import { NavLink, useNavigate } from "react-router-dom"; 
 import { FcGoogle } from "react-icons/fc";
 import { FiMail, FiLock } from "react-icons/fi";
 import "../css/Login.css";
-import "./Signup.jsx";
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +10,9 @@ const Login = () => {
     email: "",
     password: "",
   });
+
+  const navigate = useNavigate(); 
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,15 +22,45 @@ const Login = () => {
     }));
   };
 
-  const handleLogin = (e) => {
+ 
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password) return;
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => setIsLoading(false), 2000);
+
+    try {
+      const response = await fetch("http://localhost:8080/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData), // send email + password
+      });
+
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+
+      const data = await response.json();
+      console.log("✅ Login success:", data);
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        alert("Login successful!");
+        navigate("/dashboard"); 
+      } else {
+        alert(data.message || "Invalid credentials");
+      }
+    } catch (error) {
+      console.error("❌ Error logging in:", error);
+      alert("Something went wrong during login.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+ 
   const handleGoogleLogin = () => {
     console.log("Google login clicked");
   };
@@ -45,7 +77,6 @@ const Login = () => {
         </div>
 
         <form className="login-form" onSubmit={handleLogin}>
-
           <div className="input-group">
             <label className="input-label">Email Address</label>
             <div className="input-wrapper">
