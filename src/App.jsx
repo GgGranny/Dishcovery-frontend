@@ -16,6 +16,8 @@ function App() {
       </Routes>
     </Router>
 
+    // <Otp />
+
     // <Upload />
   );
 }
