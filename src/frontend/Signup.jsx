@@ -6,7 +6,6 @@ import "../css/Signup.css";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false); 
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -51,8 +50,8 @@ const Signup = () => {
       console.log("✅ Signup Response:", data);
 
       if (response.ok) {
-       
-        setShowSuccessModal(true);
+        // ✅ Redirect directly to OTP page after signup
+        navigate("/otp");
       } else {
         alert(data.message || "Signup failed. Please try again.");
       }
@@ -66,11 +65,6 @@ const Signup = () => {
 
   const handleGoogleSignup = () => {
     console.log("Google signup clicked");
-  };
-
-  const handleModalClose = () => {
-    setShowSuccessModal(false);
-    navigate("/"); 
   };
 
   const isFormValid =
@@ -184,19 +178,6 @@ const Signup = () => {
           Already have an account? <NavLink to="/login">Sign in</NavLink>
         </div>
       </div>
-
-   
-      {showSuccessModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h2>Signup Successful </h2>
-            <p>Your account has been created successfully.</p>
-            <button className="modal-ok-btn" onClick={handleModalClose}>
-              OK
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

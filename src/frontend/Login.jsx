@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiMail, FiLock } from "react-icons/fi";
 import "../css/Login.css";
+import "../frontend/Homepage";
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +49,7 @@ const Login = () => {
       if (data.token) {
         localStorage.setItem("token", data.token);
         alert("Login successful!");
-        navigate("/dashboard"); 
+        navigate("/homepage"); 
       } else {
         alert(data.message || "Invalid credentials");
       }
