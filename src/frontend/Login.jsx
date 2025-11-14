@@ -1,121 +1,120 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom"; 
+import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
-import { FiMail, FiLock } from "react-icons/fi";
+import { FiUser, FiLock } from "react-icons/fi";
+import axios from "axios";
 import "../css/Login.css";
-import "../frontend/Homepage";
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
-
+  // Handle input field changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
- 
+  // Handle login submission
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.password) return;
+    const { username, password } = formData;
+
+    if (!username || !password) {
+      alert("Please enter both username and password.");
+      return;
+    }
 
     setIsLoading(true);
-
     try {
-      const response = await fetch("http://localhost:8080/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData), // send email + password
+      // ✅ Use POST request for login
+      const response = await axios.post("http://localhost:8080/login", {
+        username,
+        password,
       });
 
-      if (!response.ok) {
-        throw new Error("Login failed");
-      }
-
-      const data = await response.json();
-      console.log("✅ Login success:", data);
-
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        alert("Login successful!");
-        navigate("/homepage"); 
+      if (response.status === 200) {
+        // ✅ Navigate directly to homepage (no alert)
+        navigate("/homepage");
       } else {
-        alert(data.message || "Invalid credentials");
+        alert("Unexpected response. Please try again.");
       }
     } catch (error) {
-      console.error("❌ Error logging in:", error);
-      alert("Something went wrong during login.");
+      console.error("Login error:", error);
+      if (error.response?.status === 401) {
+        alert("Invalid username or password.");
+      } else {
+        alert("Login failed. Please check your credentials or try again later.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
- 
+  // Google login placeholder
   const handleGoogleLogin = () => {
-    console.log("Google login clicked");
+    alert("Google login clicked");
   };
 
-  const isFormValid = formData.email && formData.password;
+  const isFormValid = formData.username && formData.password;
 
   return (
     <div className="login-page">
       <div className="login-container">
-
+        {/* Header */}
         <div className="login-header">
           <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your account to continue</p>
+          <p className="login-subtitle">Sign in to your account</p>
         </div>
 
+        {/* Login Form */}
         <form className="login-form" onSubmit={handleLogin}>
+          {/* Username */}
           <div className="input-group">
-            <label className="input-label">Email Address</label>
+            <label className="input-label">Username</label>
             <div className="input-wrapper">
-              <FiMail className="input-icon" />
+              <FiUser className="input-icon" />
               <input
-                type="email"
-                className="form-input"
-                placeholder="Enter your email"
-                name="email"
-                value={formData.email}
+                type="text"
+                name="username"
+                value={formData.username}
                 onChange={handleInputChange}
+                placeholder="Enter your username"
+                className="form-input"
                 required
               />
             </div>
           </div>
 
+          {/* Password */}
           <div className="input-group">
             <label className="input-label">Password</label>
             <div className="input-wrapper">
               <FiLock className="input-icon" />
               <input
                 type="password"
-                className="form-input"
-                placeholder="Enter your password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
+                placeholder="Enter your password"
+                className="form-input"
                 required
               />
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className={`auth-submit-btn ${
-              isLoading ? "auth-btn-loading" : ""
-            } ${!isFormValid ? "auth-btn-disabled" : ""}`}
+            className={`auth-submit-btn ${isLoading ? "auth-btn-loading" : ""} ${
+              !isFormValid ? "auth-btn-disabled" : ""
+            }`}
           >
             {isLoading ? (
               <>
@@ -128,21 +127,24 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Divider */}
         <div className="login-divider">
           <span>Or continue with</span>
         </div>
 
+        {/* Google Login */}
         <button className="google-auth-btn" onClick={handleGoogleLogin}>
           <FcGoogle className="google-icon" />
           Sign in with Google
         </button>
 
+        {/* Footer Links */}
         <div className="login-footer">
           <NavLink to="/forgot-password" className="forgot-password">
             Forgot your password?
           </NavLink>
           <div className="signup-link">
-            Don't have an account? <NavLink to="/signup">Sign up</NavLink>
+            Don’t have an account? <NavLink to="/signup">Sign up</NavLink>
           </div>
         </div>
       </div>
