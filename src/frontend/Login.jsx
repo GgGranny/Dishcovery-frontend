@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiUser, FiLock } from "react-icons/fi";
 import axios from "axios";
-import "../css/Login.css";
+import loginBg from "../assets/login-bg.png";
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,13 +14,11 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // Handle input field changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle login submission
   const handleLogin = async (e) => {
     e.preventDefault();
     const { username, password } = formData;
@@ -32,14 +30,12 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      // ✅ Use POST request for login
       const response = await axios.post("http://localhost:8080/login", {
         username,
         password,
       });
 
       if (response.status === 200) {
-        // ✅ Navigate directly to homepage (no alert)
         navigate("/homepage");
       } else {
         alert("Unexpected response. Please try again.");
@@ -49,14 +45,13 @@ const Login = () => {
       if (error.response?.status === 401) {
         alert("Invalid username or password.");
       } else {
-        alert("Login failed. Please check your credentials or try again later.");
+        alert("Login failed. Try again later.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Google login placeholder
   const handleGoogleLogin = () => {
     alert("Google login clicked");
   };
@@ -64,45 +59,53 @@ const Login = () => {
   const isFormValid = formData.username && formData.password;
 
   return (
-    <div className="login-page">
-      <div className="login-container">
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
+      style={{ backgroundImage: `url(${loginBg})` }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/40"></div>
+
+      {/* Login Card */}
+      <div className="relative bg-white/85 backdrop-blur-md p-10 rounded-2xl w-[380px] shadow-2xl z-10">
+
         {/* Header */}
-        <div className="login-header">
-          <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to your account</p>
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-green-900">Welcome Back</h1>
+          <p className="text-gray-600 text-sm mt-1">Sign in to your account</p>
         </div>
 
         {/* Login Form */}
-        <form className="login-form" onSubmit={handleLogin}>
+        <form onSubmit={handleLogin}>
           {/* Username */}
-          <div className="input-group">
-            <label className="input-label">Username</label>
-            <div className="input-wrapper">
-              <FiUser className="input-icon" />
+          <div className="mb-5">
+            <label className="block mb-1 text-gray-800 text-sm">Username</label>
+            <div className="relative">
+              <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
                 placeholder="Enter your username"
-                className="form-input"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
           </div>
 
           {/* Password */}
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div className="input-wrapper">
-              <FiLock className="input-icon" />
+          <div className="mb-5">
+            <label className="block mb-1 text-gray-800 text-sm">Password</label>
+            <div className="relative">
+              <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
-                className="form-input"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
@@ -112,15 +115,16 @@ const Login = () => {
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className={`auth-submit-btn ${isLoading ? "auth-btn-loading" : ""} ${
-              !isFormValid ? "auth-btn-disabled" : ""
-            }`}
+            className={`w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition 
+              ${isLoading ? "opacity-80 cursor-not-allowed" : "hover:bg-green-700"}
+              ${!isFormValid ? "bg-gray-300 cursor-not-allowed" : ""}
+            `}
           >
             {isLoading ? (
-              <>
-                <div className="auth-btn-spinner"></div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Signing in...
-              </>
+              </div>
             ) : (
               "Sign In"
             )}
@@ -128,23 +132,32 @@ const Login = () => {
         </form>
 
         {/* Divider */}
-        <div className="login-divider">
-          <span>Or continue with</span>
+        <div className="flex items-center justify-center my-5 text-gray-600 text-sm">
+          <span className="flex-1 h-px bg-gray-300"></span>
+          <span className="px-3">Or continue with</span>
+          <span className="flex-1 h-px bg-gray-300"></span>
         </div>
 
-        {/* Google Login */}
-        <button className="google-auth-btn" onClick={handleGoogleLogin}>
-          <FcGoogle className="google-icon" />
+        {/* Google Button */}
+        <button
+          className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 py-2 rounded-lg font-medium hover:shadow-lg transition"
+          onClick={handleGoogleLogin}
+        >
+          <FcGoogle className="text-xl" />
           Sign in with Google
         </button>
 
-        {/* Footer Links */}
-        <div className="login-footer">
-          <NavLink to="/forgot-password" className="forgot-password">
+        {/* Footer */}
+        <div className="text-center mt-6 text-sm">
+          <NavLink to="/forgot-password" className="text-green-600 hover:text-green-800">
             Forgot your password?
           </NavLink>
-          <div className="signup-link">
-            Don’t have an account? <NavLink to="/signup">Sign up</NavLink>
+
+          <div className="mt-2">
+            Don’t have an account?{" "}
+            <NavLink to="/signup" className="text-green-600 font-semibold hover:text-green-800">
+              Sign up
+            </NavLink>
           </div>
         </div>
       </div>
