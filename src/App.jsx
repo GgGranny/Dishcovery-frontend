@@ -8,6 +8,7 @@ import Otp from "./frontend/Otp";
 import AboutUs from "./frontend/Aboutus";
 import Homepage from "./frontend/afterlogin/Homepage";
 import Profile from "./frontend/afterlogin/Profile";
+import Recipes from "./frontend/afterlogin/Recipes";
 
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/recipes" element={<Recipes />} />
       </Routes>
     </Router>
 

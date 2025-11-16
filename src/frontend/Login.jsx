@@ -36,6 +36,9 @@ const Login = () => {
       });
 
       if (response.status === 200) {
+        // ⭐ SAVE USERNAME FOR PROFILE PAGE
+        localStorage.setItem("username", username);
+
         navigate("/homepage");
       } else {
         alert("Unexpected response. Please try again.");
@@ -63,21 +66,16 @@ const Login = () => {
       className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40"></div>
 
-      {/* Login Card */}
       <div className="relative bg-white/85 backdrop-blur-md p-10 rounded-2xl w-[380px] shadow-2xl z-10">
 
-        {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-green-900">Welcome Back</h1>
           <p className="text-gray-600 text-sm mt-1">Sign in to your account</p>
         </div>
 
-        {/* Login Form */}
         <form onSubmit={handleLogin}>
-          {/* Username */}
           <div className="mb-5">
             <label className="block mb-1 text-gray-800 text-sm">Username</label>
             <div className="relative">
@@ -94,7 +92,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Password */}
           <div className="mb-5">
             <label className="block mb-1 text-gray-800 text-sm">Password</label>
             <div className="relative">
@@ -111,7 +108,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
@@ -131,14 +127,12 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center justify-center my-5 text-gray-600 text-sm">
           <span className="flex-1 h-px bg-gray-300"></span>
           <span className="px-3">Or continue with</span>
           <span className="flex-1 h-px bg-gray-300"></span>
         </div>
 
-        {/* Google Button */}
         <button
           className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 py-2 rounded-lg font-medium hover:shadow-lg transition"
           onClick={handleGoogleLogin}
@@ -147,7 +141,6 @@ const Login = () => {
           Sign in with Google
         </button>
 
-        {/* Footer */}
         <div className="text-center mt-6 text-sm">
           <NavLink to="/forgot-password" className="text-green-600 hover:text-green-800">
             Forgot your password?

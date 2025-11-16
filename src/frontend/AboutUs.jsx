@@ -1,6 +1,8 @@
 import React from "react";
 import Footer from "../components/Footer";
 import Homenavbar from "../components/Homenavbar";
+import aboutBg from "../assets/about-bg.png";
+import cuisineImg from "../assets/cuisine.png"
 
 const AboutUs = () => {
   return (
@@ -8,7 +10,10 @@ const AboutUs = () => {
       <Homenavbar />
 
       {/* HERO SECTION */}
-      <section className="bg-[url('/images/food-bg-hero.jpg')] bg-cover bg-center h-[65vh] flex items-center justify-center relative">
+      <section
+        className="bg-cover bg-center h-[65vh] flex items-center justify-center relative"
+        style={{ backgroundImage: `url(${aboutBg})` }}
+      >
         <div className="absolute inset-0 bg-black/50"></div>
 
         <div className="relative max-w-4xl mx-auto px-4 text-center">
@@ -34,19 +39,20 @@ const AboutUs = () => {
               A Place Where Recipes Come Alive
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Dishcovery was created to connect passionate home cooks, food 
-              lovers, and aspiring chefs. What started as a small recipe-sharing 
-              community quickly grew into a platform where creativity and 
-              flavors meet in the most beautiful way.
-              <br /><br />
-              Our mission is simple — empower people to cook, explore, and 
-              share recipes that bring joy and meaning to their lives.
+              Dishcovery was created to connect passionate home cooks, food lovers,
+              and aspiring chefs. What started as a small recipe-sharing community
+              quickly grew into a platform where creativity and flavors meet in the
+              most beautiful way.
+              <br />
+              <br />
+              Our mission is simple — empower people to cook, explore, and share
+              recipes that bring joy and meaning to their lives.
             </p>
           </div>
 
           <div className="rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
             <img
-              src="/images/dishcovery-kitchen.jpg"
+              src={cuisineImg}
               alt="Dishcovery kitchen"
               className="w-full h-auto object-cover transition-transform duration-500 hover:scale-105"
             />
@@ -81,8 +87,7 @@ const AboutUs = () => {
               },
               {
                 title: "Simplicity",
-                description:
-                  "Making cooking easy and enjoyable for everyone.",
+                description: "Making cooking easy and enjoyable for everyone.",
                 icon: "🥗",
               },
               {
@@ -110,9 +115,7 @@ const AboutUs = () => {
       {/* TEAM SECTION */}
       <section className="py-16 max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            Meet Our Team
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Meet Our Team</h2>
           <p className="text-xl text-gray-600">
             The passionate creators behind Dishcovery
           </p>
@@ -133,9 +136,7 @@ const AboutUs = () => {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl font-bold mx-auto mb-4">
                 {member.initials}
               </div>
-              <h3 className="text-xl font-semibold text-gray-800">
-                {member.name}
-              </h3>
+              <h3 className="text-xl font-semibold text-gray-800">{member.name}</h3>
               <p className="text-green-500 mb-2">{member.role}</p>
             </div>
           ))}
