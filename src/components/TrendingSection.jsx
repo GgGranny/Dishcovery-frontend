@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "../css/TrendingSection.css";
 import img1 from "../assets/food1.png";
 import img2 from "../assets/food2.png";
 import img3 from "../assets/food3.png";
@@ -12,7 +11,7 @@ const TrendingSection = () => {
       id: 1,
       image: img1,
       title: "Newari Khaja Set",
-      desc: "A combination of beaten rice, spiced meat, egg, and pickles served as a cultural feast.",
+      desc: "A combination of beaten rice, spiced meat, egg, and pickles.",
       time: "40 min",
       author: "Aryan Maharjan",
       rating: "4.9",
@@ -21,7 +20,7 @@ const TrendingSection = () => {
       id: 2,
       image: img2,
       title: "Jhol Momo",
-      desc: "Steamed dumplings filled with juicy meat or vegetables, served with jhol and spicy chutney.",
+      desc: "Steamed dumplings with jhol and spicy chutney.",
       time: "30 min",
       author: "Abishek Rai",
       rating: "4.7",
@@ -30,7 +29,7 @@ const TrendingSection = () => {
       id: 3,
       image: img3,
       title: "Yomari",
-      desc: "A steamed rice flour dumpling stuffed with chaku or khuwa, enjoyed especially during Yomari Punhi.",
+      desc: "Rice dumpling stuffed with chaku or khuwa.",
       time: "20 min",
       author: "Nirjal Phasi",
       rating: "4.6",
@@ -39,7 +38,7 @@ const TrendingSection = () => {
       id: 4,
       image: img4,
       title: "Burger",
-      desc: "Juicy patty layered with cheese, veggies, and sauces, all packed between soft buns.",
+      desc: "Juicy patty with cheese and veggies.",
       time: "25 min",
       author: "Sagish Maharjan",
       rating: "4.8",
@@ -48,7 +47,7 @@ const TrendingSection = () => {
       id: 5,
       image: img5,
       title: "White Sauce Pasta",
-      desc: "Pasta tossed in rich white sauce with herbs and vegetables for a delicious meal.",
+      desc: "Creamy white sauce pasta with herbs.",
       time: "15 min",
       author: "Kenji Tanaka",
       rating: "4.9",
@@ -56,45 +55,50 @@ const TrendingSection = () => {
   ];
 
   const [index, setIndex] = useState(0);
-  const visibleCards = 3; // show 3 at a time
+  const visibleCards = 3;
 
-  const nextSlide = () => {
-    if (index < cards.length - visibleCards) setIndex(index + 1);
-  };
-
-  const prevSlide = () => {
-    if (index > 0) setIndex(index - 1);
-  };
+  const maxIndex = Math.max(0, cards.length - visibleCards);
 
   return (
-    <section className="trending-section">
-      <h2>Trending This Week</h2>
-      <p className="subtext">
+    <section className="text-center py-16 px-4 bg-white">
+      <h2 className="text-3xl font-bold">Trending This Week</h2>
+      <p className="text-gray-600 mt-2 mb-8">
         The most popular recipes our community is cooking right now
       </p>
 
-      <div className="carousel-container">
-        <button className="prev-btn" onClick={prevSlide} disabled={index === 0}>
+      <div className="relative max-w-6xl mx-auto">
+        {/* Left Arrow */}
+        <button
+          onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          disabled={index === 0}
+          className="absolute -left-6 top-1/2 -translate-y-1/2 bg-black/10 text-2xl rounded-full w-11 h-11 flex items-center justify-center hover:bg-black/20 disabled:opacity-40 z-20"
+        >
           ‹
         </button>
 
-        <div className="carousel-wrapper">
+        {/* Carousel Viewport */}
+        <div className="overflow-hidden">
           <div
-            className="carousel"
-            style={{
-              transform: `translateX(-${index * (100 / visibleCards)}%)`,
-            }}
+            className="flex transition-transform duration-500"
+            style={{ transform: `translateX(-${index * (100 / visibleCards)}%)` }}
           >
             {cards.map((card) => (
-              <div key={card.id} className="carousel-card">
-                <img src={card.image} alt={card.title} />
-                <div className="card-content">
-                  <h3>{card.title}</h3>
-                  <p>{card.desc}</p>
-                  <div className="card-footer">
-                    <span>⏱ {card.time}</span>
-                    <span>⭐ {card.rating}</span>
-                    <span>👨‍🍳 {card.author}</span>
+              <div
+                key={card.id}
+                className="flex-none w-full md:w-1/2 lg:w-1/3 px-4"
+              >
+                <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition hover:-translate-y-1">
+                  <img src={card.image} alt={card.title} className="w-full h-48 object-cover" />
+
+                  <div className="p-5 text-left">
+                    <h3 className="text-lg font-semibold">{card.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{card.desc}</p>
+
+                    <div className="flex justify-between text-xs text-gray-700 mt-3">
+                      <span>⏱ {card.time}</span>
+                      <span>⭐ {card.rating}</span>
+                      <span>👨‍🍳 {card.author}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -102,10 +106,11 @@ const TrendingSection = () => {
           </div>
         </div>
 
+        {/* Right Arrow */}
         <button
-          className="next-btn"
-          onClick={nextSlide}
-          disabled={index >= cards.length - visibleCards}
+          onClick={() => setIndex((i) => Math.min(maxIndex, i + 1))}
+          disabled={index >= maxIndex}
+          className="absolute -right-6 top-1/2 -translate-y-1/2 bg-black/10 text-2xl rounded-full w-11 h-11 flex items-center justify-center hover:bg-black/20 disabled:opacity-40 z-20"
         >
           ›
         </button>

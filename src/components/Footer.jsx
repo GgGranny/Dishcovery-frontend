@@ -1,69 +1,81 @@
-import "../css/Footer.css";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className="footer">
+    <footer className="bg-gray-900 text-gray-300">
+
       {/* Top Section */}
-      <div className="footer-top">
-        <h2>Share Your Culinary Masterpiece?</h2>
-        <p>
-          Join our community of passionate home cooks and share your favorite
-          recipes with food lovers worldwide.
+      <div className="text-center py-14 px-6 max-w-4xl mx-auto">
+        <h2 className="text-2xl md:text-3xl font-bold">
+          Share Your Culinary Masterpiece?
+        </h2>
+
+        <p className="mt-2 text-sm md:text-base px-2">
+          Join our community and share your recipes with food lovers worldwide.
         </p>
-        <button className="share-btn">Start Sharing Now</button>
+
+        <button className="mt-6 bg-green-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition">
+          Start Sharing Now
+        </button>
       </div>
 
       {/* Middle Section */}
-      <div className="footer-middle">
-        <div className="footer-column">
-          <h3>Dishcovery</h3>
-          <p>
-            Discover, share, and enjoy recipes from around the world with our
-            passionate cooking community.
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 px-6 max-w-7xl mx-auto py-12 border-t border-gray-700">
+
+        {/* Column 1 */}
+        <div className="text-center md:text-left">
+          <h3 className="text-xl font-bold mb-3">Dishcovery</h3>
+          <p className="text-sm leading-relaxed">
+            Discover and share recipes from around the world.
           </p>
-          <div className="social-icons">
-            <a href="#"><FaFacebookF /></a>
-            <a href="#"><FaInstagram /></a>
-            <a href="#"><FaTwitter /></a>
+
+          <div className="flex justify-center md:justify-start gap-4 text-xl mt-4">
+            <FaFacebookF className="hover:text-white cursor-pointer" />
+            <FaInstagram className="hover:text-white cursor-pointer" />
+            <FaTwitter className="hover:text-white cursor-pointer" />
           </div>
         </div>
 
-        <div className="footer-column">
-          <h4>Quick Links</h4>
-          <ul>
-            <li><a href="#">Browse Recipes</a></li>
-            <li><a href="#">Categories</a></li>
-            <li><a href="#">Community</a></li>
-            <li><a href="#">Upload Recipe</a></li>
+        {/* Column 2 */}
+        <div className="text-center md:text-left">
+          <h4 className="font-bold text-lg mb-3">Quick Links</h4>
+          <ul className="space-y-2 text-sm">
+            <li><a className="hover:text-white cursor-pointer">Browse Recipes</a></li>
+            <li><a className="hover:text-white cursor-pointer">Categories</a></li>
+            <li><a className="hover:text-white cursor-pointer">Community</a></li>
+            <li><a className="hover:text-white cursor-pointer">Upload Recipe</a></li>
           </ul>
         </div>
 
-        <div className="footer-column">
-          <h4>Categories</h4>
-          <ul>
-            <li><a href="#">Newari</a></li>
-            <li><a href="#">Indian</a></li>
-            <li><a href="#">Chinese</a></li>
-            <li><a href="#">Desserts</a></li>
+        {/* Column 3 */}
+        <div className="text-center md:text-left">
+          <h4 className="font-bold text-lg mb-3">Categories</h4>
+          <ul className="space-y-2 text-sm">
+            <li><a className="hover:text-white cursor-pointer">Newari</a></li>
+            <li><a className="hover:text-white cursor-pointer">Indian</a></li>
+            <li><a className="hover:text-white cursor-pointer">Chinese</a></li>
+            <li><a className="hover:text-white cursor-pointer">Desserts</a></li>
           </ul>
         </div>
 
-        <div className="footer-column">
-          <h4>Support</h4>
-          <ul>
-            <li><a href="#">Help Center</a></li>
-            <li><a href="#">Contact Us</a></li>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Terms of Service</a></li>
+        {/* Column 4 */}
+        <div className="text-center md:text-left">
+          <h4 className="font-bold text-lg mb-3">Support</h4>
+          <ul className="space-y-2 text-sm">
+            <li><a className="hover:text-white cursor-pointer">Help Center</a></li>
+            <li><a className="hover:text-white cursor-pointer">Contact Us</a></li>
+            <li><a className="hover:text-white cursor-pointer">Privacy Policy</a></li>
+            <li><a className="hover:text-white cursor-pointer">Terms of Service</a></li>
           </ul>
         </div>
+
       </div>
 
       {/* Bottom Section */}
-      <div className="footer-bottom">
-        <p>© 2024 Dishcovery. All rights reserved.</p>
+      <div className="py-5 text-center border-t border-gray-700 text-sm">
+        © 2024 Dishcovery. All rights reserved.
       </div>
+
     </footer>
   );
 };

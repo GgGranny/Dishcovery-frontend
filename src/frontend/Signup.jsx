@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiUser, FiMail, FiLock } from "react-icons/fi";
-import "../css/Signup.css";
+import signupBg from "../assets/login-bg.png";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -47,24 +47,16 @@ const Signup = () => {
       });
 
       const data = await response.json();
-      console.log("✅ Signup Response:", data);
 
       if (response.ok) {
-        // ✅ Redirect directly to OTP page after signup
         navigate("/otp");
       } else {
-        alert(data.message || "Signup failed. Please try again.");
+        alert(data.message || "Signup failed.");
       }
-    } catch (error) {
-      console.error("❌ Error during signup:", error);
-      alert("Something went wrong. Please try again.");
-    } finally {
+    } 
+    finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleSignup = () => {
-    console.log("Google signup clicked");
   };
 
   const isFormValid =
@@ -75,107 +67,134 @@ const Signup = () => {
     formData.password === formData.confirmPassword;
 
   return (
-    <div className="signup-page">
-      <div className="signup-container">
-        <div className="signup-header">
-          <h1 className="signup-title">Create Account</h1>
-          <p className="signup-subtitle">Sign up to get started with your account</p>
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
+      style={{ backgroundImage: `url(${signupBg})` }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/40"></div>
+
+      {/* Signup Box */}
+      <div className="relative bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl w-[400px] p-10 z-10">
+
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-green-900">Create Account</h1>
+          <p className="text-gray-600 text-sm mt-1">Sign up to get started</p>
         </div>
 
-        <form className="signup-form" onSubmit={handleSignup}>
-          <div className="input-group">
-            <label className="input-label">Username</label>
-            <div className="input-wrapper">
-              <FiUser className="input-icon" />
+        {/* Form */}
+        <form onSubmit={handleSignup}>
+          {/* Username */}
+          <div className="mb-5">
+            <label className="block mb-1 text-sm text-gray-800">Username</label>
+            <div className="relative">
+              <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
-                className="form-input"
-                placeholder="Enter your username"
                 name="username"
+                placeholder="Enter your username"
                 value={formData.username}
                 onChange={handleInputChange}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <div className="input-wrapper">
-              <FiMail className="input-icon" />
+          {/* Email */}
+          <div className="mb-5">
+            <label className="block mb-1 text-sm text-gray-800">Email Address</label>
+            <div className="relative">
+              <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="email"
-                className="form-input"
-                placeholder="Enter your email"
                 name="email"
+                placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleInputChange}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div className="input-wrapper">
-              <FiLock className="input-icon" />
+          {/* Password */}
+          <div className="mb-5">
+            <label className="block mb-1 text-sm text-gray-800">Password</label>
+            <div className="relative">
+              <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="password"
-                className="form-input"
-                placeholder="Enter your password"
                 name="password"
+                placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Confirm Password</label>
-            <div className="input-wrapper">
-              <FiLock className="input-icon" />
+          {/* Confirm Password */}
+          <div className="mb-6">
+            <label className="block mb-1 text-sm text-gray-800">Confirm Password</label>
+            <div className="relative">
+              <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="password"
-                className="form-input"
-                placeholder="Confirm your password"
                 name="confirmPassword"
+                placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
             </div>
           </div>
 
+          {/* Signup button */}
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className={`auth-submit-btn ${isLoading ? "auth-btn-loading" : ""} ${
-              !isFormValid ? "auth-btn-disabled" : ""
-            }`}
+            className={`
+              w-full py-3 rounded-lg font-semibold text-white transition 
+              ${!isFormValid ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}
+            `}
           >
             {isLoading ? (
-              <>
-                <div className="auth-btn-spinner"></div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Signing up...
-              </>
+              </div>
             ) : (
               "Sign Up"
             )}
           </button>
         </form>
 
-        <div className="login-divider">
-          <span>Or continue with</span>
+        {/* Divider */}
+        <div className="flex items-center justify-center my-5 text-gray-600 text-sm">
+          <span className="flex-1 h-px bg-gray-300"></span>
+          <span className="px-3">Or continue with</span>
+          <span className="flex-1 h-px bg-gray-300"></span>
         </div>
 
-        <button className="google-auth-btn" onClick={handleGoogleSignup}>
-          <FcGoogle className="google-icon" />
+        {/* Google signup */}
+        <button
+          onClick={() => console.log("Google signup clicked")}
+          className="w-full bg-white border border-gray-300 rounded-lg py-2 flex items-center justify-center gap-2 font-medium hover:shadow-lg transition"
+        >
+          <FcGoogle className="text-xl" />
           Sign up with Google
         </button>
 
-        <div className="signup-footer">
-          Already have an account? <NavLink to="/login">Sign in</NavLink>
+        {/* Footer */}
+        <div className="text-center mt-6 text-sm text-gray-800">
+          Already have an account?{" "}
+          <NavLink to="/login" className="text-green-600 hover:text-green-800">
+            Sign in
+          </NavLink>
         </div>
       </div>
     </div>
