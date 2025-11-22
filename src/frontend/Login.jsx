@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom"; 
+import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiMail, FiLock } from "react-icons/fi";
 import "../css/Login.css";
@@ -8,11 +8,11 @@ import "../frontend/Homepage";
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
 
   const handleInputChange = (e) => {
@@ -23,10 +23,10 @@ const Login = () => {
     }));
   };
 
- 
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.password) return;
+    if (!formData.username || !formData.password) return;
 
     setIsLoading(true);
 
@@ -39,6 +39,7 @@ const Login = () => {
         body: JSON.stringify(formData), // send email + password
       });
 
+
       if (!response.ok) {
         throw new Error("Login failed");
       }
@@ -46,10 +47,11 @@ const Login = () => {
       const data = await response.json();
       console.log("✅ Login success:", data);
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
+      if (data.data) {
+        console.log(data)
+        localStorage.setItem("token", data.data);
         alert("Login successful!");
-        navigate("/homepage"); 
+        // navigate("/homepage");
       } else {
         alert(data.message || "Invalid credentials");
       }
@@ -61,12 +63,12 @@ const Login = () => {
     }
   };
 
- 
+
   const handleGoogleLogin = () => {
     console.log("Google login clicked");
   };
 
-  const isFormValid = formData.email && formData.password;
+  const isFormValid = formData.username && formData.password;
 
   return (
     <div className="login-page">
@@ -79,15 +81,15 @@ const Login = () => {
 
         <form className="login-form" onSubmit={handleLogin}>
           <div className="input-group">
-            <label className="input-label">Email Address</label>
+            <label className="input-label">Username</label>
             <div className="input-wrapper">
               <FiMail className="input-icon" />
               <input
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="Enter your email"
-                name="email"
-                value={formData.email}
+                placeholder="Enter your username"
+                name="username"
+                value={formData.username}
                 onChange={handleInputChange}
                 required
               />
@@ -113,9 +115,8 @@ const Login = () => {
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className={`auth-submit-btn ${
-              isLoading ? "auth-btn-loading" : ""
-            } ${!isFormValid ? "auth-btn-disabled" : ""}`}
+            className={`auth-submit-btn ${isLoading ? "auth-btn-loading" : ""
+              } ${!isFormValid ? "auth-btn-disabled" : ""}`}
           >
             {isLoading ? (
               <>
