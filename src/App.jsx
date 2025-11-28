@@ -4,11 +4,12 @@ import Login from "./frontend/Login";
 import Signup from "./frontend/Signup";
 import Upload from "./frontend/Upload";
 import Otp from "./frontend/Otp";
-
-import AboutUs from "./frontend/Aboutus";
 import Homepage from "./frontend/afterlogin/Homepage";
 import Profile from "./frontend/afterlogin/Profile";
 import Recipes from "./frontend/afterlogin/Recipes";
+import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
+import AboutUs from "./frontend/AboutUs";
+import Setting from "./frontend/afterlogin/Setting";
 
 
 function App() {
@@ -23,6 +24,8 @@ function App() {
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recipes" element={<Recipes />} />
+        <Route path="/uploadrecipes" element={<UploadRecipes />} />
+        <Route path="/setting" element={<Setting />} />
       </Routes>
     </Router>
 

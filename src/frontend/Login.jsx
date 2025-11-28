@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FiUser, FiLock } from "react-icons/fi";
-import axios from "axios";
 import loginBg from "../assets/login-bg.png";
 
 const Login = () => {
@@ -21,35 +20,47 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const { username, password } = formData;
 
+    const { username, password } = formData;
     if (!username || !password) {
       alert("Please enter both username and password.");
       return;
     }
 
     setIsLoading(true);
+
     try {
-      const response = await axios.post("http://localhost:8080/login", {
-        username,
-        password,
+      const response = await fetch("http://localhost:8080/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
       });
 
-      if (response.status === 200) {
-        // ⭐ SAVE USERNAME FOR PROFILE PAGE
-        localStorage.setItem("username", username);
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert("Invalid username or password.");
+        } else {
+          alert("Server error. Try again later.");
+        }
+        return;
+      }
 
+      // Read the response as plain text (JWT string)
+      const token = await response.text();
+      console.log("Login token:", token);
+
+      if (token) {
+        localStorage.setItem("token", token);
+        alert("Login successful!");
         navigate("/homepage");
       } else {
-        alert("Unexpected response. Please try again.");
+        alert("Invalid credentials");
       }
     } catch (error) {
       console.error("Login error:", error);
-      if (error.response?.status === 401) {
-        alert("Invalid username or password.");
-      } else {
-        alert("Login failed. Try again later.");
-      }
+      alert("Something went wrong during login.");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +80,6 @@ const Login = () => {
       <div className="absolute inset-0 bg-black/40"></div>
 
       <div className="relative bg-white/85 backdrop-blur-md p-10 rounded-2xl w-[380px] shadow-2xl z-10">
-
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-green-900">Welcome Back</h1>
           <p className="text-gray-600 text-sm mt-1">Sign in to your account</p>
@@ -113,8 +123,7 @@ const Login = () => {
             disabled={isLoading || !isFormValid}
             className={`w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition 
               ${isLoading ? "opacity-80 cursor-not-allowed" : "hover:bg-green-700"}
-              ${!isFormValid ? "bg-gray-300 cursor-not-allowed" : ""}
-            `}
+              ${!isFormValid ? "bg-gray-300 cursor-not-allowed" : ""}`}
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -145,7 +154,6 @@ const Login = () => {
           <NavLink to="/forgot-password" className="text-green-600 hover:text-green-800">
             Forgot your password?
           </NavLink>
-
           <div className="mt-2">
             Don’t have an account?{" "}
             <NavLink to="/signup" className="text-green-600 font-semibold hover:text-green-800">
