@@ -45,7 +45,7 @@ const VideoPlayer = ({ src }) => {
     };
 
     return (
-        <div>
+        <div className="h-full border border-green-400">
             <video
                 ref={videoRef}
                 controls

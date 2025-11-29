@@ -20,6 +20,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/otp" element={<Otp />} />
+        {/* <Route path="/recipe" element={<Comments />} /> */}
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
