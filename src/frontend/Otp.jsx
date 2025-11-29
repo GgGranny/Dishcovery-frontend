@@ -1,80 +1,118 @@
-import axios from "axios";
-import { useState } from "react";
+import React, { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate for redirect
 
 const Otp = () => {
-  const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { token } = useParams(); // token from URL
+  const navigate = useNavigate(); // for redirecting to login page
+
+  const [otp, setOtp] = useState(Array(6).fill(""));
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const handleOnChange = (e) => {
-    setOtp(e.target.value);
+  const handleChange = (e, index) => {
+    const value = e.target.value;
+    if (/^[0-9]?$/.test(value)) {
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
+
+      // Auto focus next input
+      if (value && index < 5) {
+        document.getElementById(`otp-${index + 1}`).focus();
+      }
+    }
   };
 
-  const handleSubmit = async () => {
-    if (otp.trim().length < 4) {
-      setMessage("OTP must be at least 4 digits.");
+  const handleKeyDown = (e, index) => {
+    // Handle backspace to move focus backward
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`).focus();
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const otpValue = otp.join("");
+
+    if (otpValue.length !== 6) {
+      setMessage("⚠️ Please enter the 6-digit OTP.");
       return;
     }
 
-    try {
-      setLoading(true);
-      setMessage("");
+    setIsLoading(true);
+    setMessage("");
 
-      const response = await axios.get(
-        `http://localhost:8080/register/verify-email/${otp}`
+    try {
+      const response = await fetch(
+        `http://localhost:8080/register/verify-email/${token}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ otp: otpValue }),
+        }
       );
 
-      console.log(response.data);
-      setMessage("OTP Verified Successfully!");
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage("✅ Email verified successfully! Redirecting to login...");
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      } else {
+        setMessage(`❌ Verification failed: ${data.message || "Invalid OTP."}`);
+      }
     } catch (error) {
-      console.error(error);
-      setMessage("Invalid or expired OTP!");
+      console.error("Error verifying OTP:", error);
+      setMessage("⚠️ Server error. Please try again later.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 to-black text-white flex justify-center items-center">
-      <div className="bg-gray-800 p-10 rounded-xl shadow-2xl w-96 flex flex-col gap-6">
-
-        <h1 className="text-2xl font-semibold text-center mb-2">
+    <div className="flex items-center justify-center h-screen bg-gray-100">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md text-center">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
           Verify Your Email
-        </h1>
+        </h2>
 
-        {/* OTP Input */}
-        <input
-          type="text"
-          onChange={handleOnChange}
-          value={otp}
-          name="otp"
-          maxLength="6"
-          placeholder="Enter OTP"
-          className="w-full px-4 py-3 rounded-md bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg tracking-widest text-center"
-        />
+        <p className="text-sm text-gray-500 mb-4">
+          Token: <span className="font-mono">{token}</span>
+        </p>
 
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className={`w-full py-3 rounded-md text-lg font-medium transition-all 
-            ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} 
-          `}
-        >
-          {loading ? "Verifying..." : "Submit"}
-        </button>
+        <form onSubmit={handleSubmit}>
+          <div className="flex justify-center gap-3 mb-6">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                id={`otp-${index}`}
+                type="text"
+                maxLength="1"
+                value={digit}
+                onChange={(e) => handleChange(e, index)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                className="w-12 h-12 text-center text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            ))}
+          </div>
 
-        {/* Message */}
-        {message && (
-          <p
-            className={`text-center text-sm ${
-              message.includes("Successfully")
-                ? "text-green-400"
-                : "text-red-400"
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`w-full py-2 rounded-lg text-white ${
+              isLoading
+                ? "bg-green-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700 transition"
             }`}
           >
-            {message}
-          </p>
+            {isLoading ? "Verifying..." : "Verify OTP"}
+          </button>
+        </form>
+
+        {message && (
+          <p className="mt-4 text-sm text-gray-700">{message}</p>
         )}
       </div>
     </div>
