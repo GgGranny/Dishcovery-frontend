@@ -53,7 +53,6 @@ const Login = () => {
 
       if (token) {
         localStorage.setItem("token", token);
-        alert("Login successful!");
         navigate("/homepage");
       } else {
         alert("Invalid credentials");

@@ -18,24 +18,35 @@ const Recipes = () => {
 
   const token = localStorage.getItem("token");
 
+  // Fetch recipes
   useEffect(() => {
     const fetchRecipes = async () => {
       if (!token) {
-        setError("Please log in to view recipes.");
+        setError("You are not logged in.");
         setLoading(false);
         return;
       }
 
       try {
-        const res = await axios.get("http://localhost:8080/api/recipes/all", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "http://localhost:8080/api/recipes/recipe/r1/1",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-        setRecipes(res.data);
-        setFilteredRecipes(res.data); // initially show all
+        console.log("API response:", res.data);
+
+        // Wrap single object in array
+        const recipesArray = Array.isArray(res.data) ? res.data : [res.data];
+
+        setRecipes(recipesArray);
+        setFilteredRecipes(recipesArray);
       } catch (err) {
-        console.error("Error fetching recipes:", err.response || err);
-        setError("Failed to load recipes.");
+        if (err.response && err.response.status === 401) {
+          setError("Your session expired. Please log in again.");
+        } else {
+          setError("Failed to load recipes.");
+        }
+        console.error(err.response || err);
       } finally {
         setLoading(false);
       }
@@ -44,26 +55,20 @@ const Recipes = () => {
     fetchRecipes();
   }, [token]);
 
-  // Filter recipes whenever filters change
+  // Apply filters
   useEffect(() => {
     let filtered = [...recipes];
 
     if (filters.category.length > 0) {
-      filtered = filtered.filter((r) =>
-        filters.category.includes(r.category)
-      );
+      filtered = filtered.filter((r) => filters.category.includes(r.category));
     }
-
     if (filters.difficulty.length > 0) {
       filtered = filtered.filter((r) =>
         filters.difficulty.includes(r.difficulty)
       );
     }
-
     if (filters.cuisine.length > 0) {
-      filtered = filtered.filter((r) =>
-        filters.cuisine.includes(r.cuisine)
-      );
+      filtered = filtered.filter((r) => filters.cuisine.includes(r.cuisine));
     }
 
     setFilteredRecipes(filtered);
@@ -80,9 +85,8 @@ const Recipes = () => {
     });
   };
 
-  const resetFilters = () => {
+  const resetFilters = () =>
     setFilters({ category: [], difficulty: [], cuisine: [] });
-  };
 
   return (
     <div className="w-full min-h-screen bg-white">
@@ -106,7 +110,7 @@ const Recipes = () => {
           {/* Category */}
           <div className="bg-[#EAF8EB] p-4 rounded-xl shadow-sm">
             <h2 className="font-semibold mb-3">Category</h2>
-            {["Veg", "Non-Veg"].map((item) => (
+            {["Veg", "Non-Veg", "Nepali"].map((item) => (
               <label key={item} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -149,6 +153,7 @@ const Recipes = () => {
               "Tibetan",
               "Mithila",
               "National-Style",
+              "Nepali",
             ].map((item) => (
               <label key={item} className="flex items-center gap-2 text-sm">
                 <input
@@ -162,15 +167,12 @@ const Recipes = () => {
             ))}
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-3">
-            <button
-              className="px-4 py-2 border border-gray-400 text-gray-700 rounded-lg text-sm"
-              onClick={resetFilters}
-            >
-              Reset
-            </button>
-          </div>
+          <button
+            className="px-4 py-2 border border-gray-400 text-gray-700 rounded-lg text-sm w-full"
+            onClick={resetFilters}
+          >
+            Reset Filters
+          </button>
         </div>
 
         {/* Recipe Cards */}
@@ -180,20 +182,18 @@ const Recipes = () => {
           ) : error ? (
             <p className="text-center mt-10 text-red-500">{error}</p>
           ) : filteredRecipes.length === 0 ? (
-            <p className="text-center mt-10 text-gray-600">
-              No recipes found.
-            </p>
+            <p className="text-center mt-10 text-gray-600">No recipes found.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredRecipes.map((recipe) => (
                 <div
-                  key={recipe._id}
+                  key={recipe.recipeId}
                   className="bg-white shadow-md rounded-xl overflow-hidden border hover:shadow-lg transition p-3 cursor-pointer"
                 >
                   <img
                     src={
-                      recipe.recipeThumbnail
-                        ? `data:image/jpeg;base64,${recipe.recipeThumbnail}`
+                      recipe.thumbnail
+                        ? `data:image/jpeg;base64,${recipe.thumbnail}`
                         : "https://via.placeholder.com/300"
                     }
                     alt={recipe.recipeName}
@@ -201,14 +201,7 @@ const Recipes = () => {
                   />
                   <h3 className="font-semibold text-sm">{recipe.recipeName}</h3>
                   <p className="text-xs text-gray-500 mt-1">
-                    {recipe.recipeDescription?.slice(0, 60)}...
-                  </p>
-                  <div className="flex justify-between items-center text-xs text-gray-600 mt-3">
-                    <span>⏱ {recipe.cookTime || "N/A"}</span>
-                    <span>⭐ {recipe.rating || "0"}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    By {recipe.userName || "Unknown"}
+                    {recipe.description?.slice(0, 60)}...
                   </p>
                 </div>
               ))}
