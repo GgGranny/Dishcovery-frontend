@@ -48,11 +48,12 @@ const Login = () => {
       }
 
       // Read the response as plain text (JWT string)
-      const token = await response.text();
-      console.log("Login token:", token);
+      const data = await response.json();
+      console.log("Login token:", data);
 
-      if (token) {
-        localStorage.setItem("token", token);
+      if (data) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("refreshToken", data.refreshToken);
         navigate("/homepage");
       } else {
         alert("Invalid credentials");
