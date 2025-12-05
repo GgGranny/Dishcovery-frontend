@@ -3,6 +3,7 @@ import axios from "axios";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import recipeBg from "../../assets/recipe-bg.png";
+import { useNavigate } from "react-router-dom";
 
 const Recipes = () => {
   const [recipes, setRecipes] = useState([]);
@@ -17,6 +18,7 @@ const Recipes = () => {
   });
 
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   // Fetch recipes
   useEffect(() => {
@@ -29,15 +31,11 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          "http://localhost:8080/api/recipes/recipe/r1/1",
+          "http://localhost:8080/api/recipes/recipe/r1/3",
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log("API response:", res.data);
-
-        // Wrap single object in array
         const recipesArray = Array.isArray(res.data) ? res.data : [res.data];
-
         setRecipes(recipesArray);
         setFilteredRecipes(recipesArray);
       } catch (err) {
@@ -168,7 +166,7 @@ const Recipes = () => {
           </div>
 
           <button
-            className="px-4 py-2 border border-gray-400 text-gray-700 rounded-lg text-sm w-full"
+            className="px-4 py-2 border border-gray-400 text-gray-700 rounded-lg text-sm w-full hover:bg-gray-100 transition"
             onClick={resetFilters}
           >
             Reset Filters
@@ -188,21 +186,38 @@ const Recipes = () => {
               {filteredRecipes.map((recipe) => (
                 <div
                   key={recipe.recipeId}
-                  className="bg-white shadow-md rounded-xl overflow-hidden border hover:shadow-lg transition p-3 cursor-pointer"
+                  className="relative bg-white shadow-md rounded-xl overflow-hidden border hover:shadow-xl hover:scale-105 transition transform cursor-pointer"
+                  onClick={() => navigate(`/aboutrecipes/${recipe.recipeId}`)}
                 >
-                  <img
-                    src={
-                      recipe.thumbnail
-                        ? `data:image/jpeg;base64,${recipe.thumbnail}`
-                        : "https://via.placeholder.com/300"
-                    }
-                    alt={recipe.recipeName}
-                    className="rounded-lg mb-3 w-full h-36 object-cover"
-                  />
-                  <h3 className="font-semibold text-sm">{recipe.recipeName}</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {recipe.description?.slice(0, 60)}...
-                  </p>
+                  {/* Image */}
+                  <div className="h-44 w-full overflow-hidden rounded-t-xl">
+                    <img
+                      src={
+                        recipe.thumbnail
+                          ? `data:image/jpeg;base64,${recipe.thumbnail}`
+                          : "https://via.placeholder.com/300"
+                      }
+                      alt={recipe.recipeName}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg truncate">{recipe.recipeName}</h3>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-3">
+                      {recipe.description || "No description available."}
+                    </p>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-gray-400">
+                        {recipe.category || "Category"}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {recipe.difficulty || "Easy"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

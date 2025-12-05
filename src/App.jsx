@@ -10,6 +10,7 @@ import Recipes from "./frontend/afterlogin/Recipes";
 import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
 import AboutUs from "./frontend/AboutUs";
 import Setting from "./frontend/afterlogin/Setting";
+import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/uploadrecipes" element={<UploadRecipes />} />
         <Route path="/setting" element={<Setting />} />
+        <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
       </Routes>
     </Router>
 
