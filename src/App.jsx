@@ -10,6 +10,8 @@ import Recipes from "./frontend/afterlogin/Recipes";
 import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
 import AboutUs from "./frontend/AboutUs";
 import Setting from "./frontend/afterlogin/Setting";
+import Comments from "./components/Comments";
+import Payments from "./components/Payment";
 
 
 function App() {
@@ -19,14 +21,15 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/otp" element={<Otp />} />
-        {/* <Route path="/recipe" element={<Comments />} /> */}
-        <Route path="/homepage" element={<Homepage />} />
+        {/* <Route path="/otp" element={<Otp />} /> */}
+        <Route path="/recipe" element={<Comments />} />
+        <Route path="/payment" element={<Payments />} />
+        {/* <Route path="/homepage" element={<Homepage />} />
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/uploadrecipes" element={<UploadRecipes />} />
-        <Route path="/setting" element={<Setting />} />
+        <Route path="/setting" element={<Setting />} /> */}
       </Routes>
     </Router>
 
