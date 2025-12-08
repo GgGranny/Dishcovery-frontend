@@ -19,11 +19,13 @@ const UploadRecipes = () => {
     videoDescription: "",
   });
   const [loading, setLoading] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [stepsArray, setStepsArray] = useState([null]);
+
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
-
 
   const isTokenExpired = (token) => {
     if (!token) return true;
@@ -31,7 +33,7 @@ const UploadRecipes = () => {
       const payload = JSON.parse(atob(token.split(".")[1]));
       return Date.now() > payload.exp * 1000;
     } catch (err) {
-      console.log(err)  
+      console.log(err);
       return true;
     }
   };
@@ -39,8 +41,13 @@ const UploadRecipes = () => {
   const addIngredient = () =>
     setFormData({ ...formData, ingredients: [...formData.ingredients, ""] });
 
-  const addStep = () =>
-    setFormData({ ...formData, steps: [...formData.steps, ""] });
+  const addStep = () => {
+    setFormData({
+      ...formData,
+      steps: [...formData.steps, ""]
+    });
+    console.log(formData.steps)
+  }
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
@@ -54,21 +61,19 @@ const UploadRecipes = () => {
 
   const handleSubmit = async () => {
     const token = localStorage.getItem("token");
- 
 
     if (!token || isTokenExpired(token)) {
       alert("Your login session expired. Please log in again.");
       return;
     }
 
-    // FormData for multipart upload
     const data = new FormData();
     data.append("recipeName", formData.recipeName);
     data.append("recipeDescription", formData.recipeDescription);
     data.append("category", formData.category);
     data.append("cookTime", formData.cookTime);
-    data.append("ingredients", JSON.stringify(formData.ingredients));
-    data.append("steps", JSON.stringify(formData.steps));
+    data.append("ingredients", formData.ingredients.filter(ingredient => ingredient.trim() !== "").join(","));
+    data.append("steps", formData.steps.filter(step => step.trim() !== "").join(","));
 
     if (formData.recipeThumbnail) {
       data.append("recipeThumbnail", formData.recipeThumbnail);
@@ -90,7 +95,6 @@ const UploadRecipes = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            // ❗ DO NOT SET multipart/form-data manually
           },
         }
       );
@@ -112,6 +116,10 @@ const UploadRecipes = () => {
       });
 
       setStep(1);
+
+      // Show success popup
+      setShowSuccessPopup(true);
+      setTimeout(() => setShowSuccessPopup(false), 3000);
     } catch (error) {
       console.error(
         "Upload Error:",
@@ -121,8 +129,6 @@ const UploadRecipes = () => {
       setLoading(false);
     }
   };
-
-
 
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col">
@@ -138,7 +144,9 @@ const UploadRecipes = () => {
           <h1 className="text-4xl font-semibold drop-shadow-lg">
             Share Your Recipe
           </h1>
-          <p className="mt-1 opacity-90">Inspire others with your cooking creativity</p>
+          <p className="mt-1 opacity-90">
+            Inspire others with your cooking creativity
+          </p>
         </div>
       </div>
 
@@ -149,16 +157,17 @@ const UploadRecipes = () => {
           {[1, 2, 3, 4, 5].map((num) => (
             <div key={num} className="flex flex-col items-center w-full">
               <div
-                className={`w-11 h-11 flex items-center justify-center rounded-full text-lg font-bold transition-all duration-300 ${
-                  step === num
-                    ? "bg-green-600 text-white shadow-lg"
-                    : "bg-gray-300 text-gray-700"
-                }`}
+                className={`w-11 h-11 flex items-center justify-center rounded-full text-lg font-bold transition-all duration-300 ${step === num
+                  ? "bg-green-600 text-white shadow-lg"
+                  : "bg-gray-300 text-gray-700"
+                  }`}
               >
                 {num}
               </div>
               <p className="mt-2 text-sm text-gray-600">
-                {["Basic Info", "Ingredients", "Instructions", "Media", "Publish"][num - 1]}
+                {["Basic Info", "Ingredients", "Instructions", "Media", "Publish"][
+                  num - 1
+                ]}
               </p>
             </div>
           ))}
@@ -168,7 +177,9 @@ const UploadRecipes = () => {
           {/* STEP 1 */}
           {step === 1 && (
             <>
-              <h2 className="text-2xl font-semibold mb-6">Basic Recipe Information</h2>
+              <h2 className="text-2xl font-semibold mb-6">
+                Basic Recipe Information
+              </h2>
 
               <label className="block font-medium mb-1">Recipe Name *</label>
               <input
@@ -267,21 +278,28 @@ const UploadRecipes = () => {
           {step === 3 && (
             <>
               <h2 className="text-2xl font-semibold mb-6">Instructions</h2>
+              {
+                formData.steps.map((stp, i) => (
+                  <div key={i} className="mb-4">
+                    <label className="block font-medium mb-1">Step {i + 1}</label>
 
-              {formData.steps.map((stp, i) => (
-                <div key={i} className="mb-4">
-                  <label className="block font-medium mb-1">Step {i + 1}</label>
-                  <input
-                    value={stp}
-                    onChange={(e) => {
-                      const arr = [...formData.steps];
-                      arr[i] = e.target.value;
-                      setFormData({ ...formData, steps: arr });
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border"
-                  />
-                </div>
-              ))}
+                    <input
+                      value={stp}
+                      onChange={(e) => {
+                        const updatedSteps = [...formData.steps];
+                        updatedSteps[i] = e.target.value;
+
+                        setFormData({
+                          ...formData,
+                          steps: updatedSteps
+                        });
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border"
+                    />
+                  </div>
+                ))
+              }
+
 
               <button onClick={addStep} className="text-green-700 mt-3">
                 + Add Step
@@ -388,13 +406,28 @@ const UploadRecipes = () => {
                 <h3 className="font-semibold text-lg mb-4">Summary</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <p><strong>Name:</strong> {formData.recipeName}</p>
-                  <p><strong>Category:</strong> {formData.category}</p>
-                  <p><strong>Cook Time:</strong> {formData.cookTime}</p>
-                  <p><strong>Ingredients:</strong> {formData.ingredients.length}</p>
-                  <p><strong>Steps:</strong> {formData.steps.length}</p>
-                  <p><strong>Thumbnail:</strong> {formData.recipeThumbnail ? "Uploaded" : "Missing"}</p>
-                  <p><strong>Video:</strong> {formData.file ? "Uploaded" : "None"}</p>
+                  <p>
+                    <strong>Name:</strong> {formData.recipeName}
+                  </p>
+                  <p>
+                    <strong>Category:</strong> {formData.category}
+                  </p>
+                  <p>
+                    <strong>Cook Time:</strong> {formData.cookTime}
+                  </p>
+                  <p>
+                    <strong>Ingredients:</strong> {formData.ingredients.length}
+                  </p>
+                  <p>
+                    <strong>Steps:</strong> {formData.steps.length}
+                  </p>
+                  <p>
+                    <strong>Thumbnail:</strong>{" "}
+                    {formData.recipeThumbnail ? "Uploaded" : "Missing"}
+                  </p>
+                  <p>
+                    <strong>Video:</strong> {formData.file ? "Uploaded" : "None"}
+                  </p>
                 </div>
               </div>
 
@@ -408,9 +441,8 @@ const UploadRecipes = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className={`px-7 py-3 rounded-xl text-white ${
-                    loading ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
-                  }`}
+                  className={`px-7 py-3 rounded-xl text-white ${loading ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
+                    }`}
                 >
                   {loading ? "Uploading..." : "Publish Recipe ↑"}
                 </button>
@@ -419,6 +451,25 @@ const UploadRecipes = () => {
           )}
         </div>
       </div>
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-black/50 absolute inset-0"></div>
+          <div className="bg-white p-6 rounded-xl shadow-lg z-10 text-center max-w-sm mx-auto">
+            <h3 className="text-lg font-semibold text-green-600 mb-2">Success!</h3>
+            <p className="text-gray-700 mb-4">
+              Your recipe has been added successfully.
+            </p>
+            <button
+              onClick={() => setShowSuccessPopup(false)}
+              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

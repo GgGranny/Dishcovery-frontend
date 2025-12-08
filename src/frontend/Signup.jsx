@@ -47,6 +47,7 @@ const Signup = () => {
       });
 
       const data = await response.json();
+      console.log(data,"res")
 
       if (response.ok) {
         navigate("/otp");

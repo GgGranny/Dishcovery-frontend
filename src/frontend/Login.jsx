@@ -47,13 +47,17 @@ const Login = () => {
         return;
       }
 
-      // Read the response as plain text (JWT string)
       const data = await response.json();
       console.log("Login token:", data);
 
       if (data) {
+        // Store token and refresh token
         localStorage.setItem("token", data.token);
         localStorage.setItem("refreshToken", data.refreshToken);
+
+        // ⭐ Store username in localStorage
+        localStorage.setItem("username", username);
+
         navigate("/homepage");
       } else {
         alert("Invalid credentials");
@@ -151,12 +155,18 @@ const Login = () => {
         </button>
 
         <div className="text-center mt-6 text-sm">
-          <NavLink to="/forgot-password" className="text-green-600 hover:text-green-800">
+          <NavLink
+            to="/forgot-password"
+            className="text-green-600 hover:text-green-800"
+          >
             Forgot your password?
           </NavLink>
           <div className="mt-2">
             Don’t have an account?{" "}
-            <NavLink to="/signup" className="text-green-600 font-semibold hover:text-green-800">
+            <NavLink
+              to="/signup"
+              className="text-green-600 font-semibold hover:text-green-800"
+            >
               Sign up
             </NavLink>
           </div>

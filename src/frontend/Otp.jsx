@@ -1,119 +1,115 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate for redirect
+import axios from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Otp = () => {
-  const { token } = useParams(); // token from URL
-  const navigate = useNavigate(); // for redirecting to login page
-
-  const [otp, setOtp] = useState(Array(6).fill(""));
+  const [otp, setOtp] = useState("");
+  const [message, setMessage] = useState({ text: "", type: "" });
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  const handleChange = (e, index) => {
-    const value = e.target.value;
-    if (/^[0-9]?$/.test(value)) {
-      const newOtp = [...otp];
-      newOtp[index] = value;
-      setOtp(newOtp);
-
-      // Auto focus next input
-      if (value && index < 5) {
-        document.getElementById(`otp-${index + 1}`).focus();
-      }
-    }
+  const handleOnChange = (e) => {
+    setOtp(e.target.value);
+    setMessage({ text: "", type: "" });
   };
 
-  const handleKeyDown = (e, index) => {
-    // Handle backspace to move focus backward
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`).focus();
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const otpValue = otp.join("");
-
-    if (otpValue.length !== 6) {
-      setMessage("⚠️ Please enter the 6-digit OTP.");
+  const handleSubmit = async () => {
+    if (!otp) {
+      setMessage({ text: "⚠️ Please enter the OTP first.", type: "error" });
       return;
     }
 
     setIsLoading(true);
-    setMessage("");
-
     try {
-      const response = await fetch(
-        `http://localhost:8080/register/verify-email/${token}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ otp: otpValue }),
-        }
+      const response = await axios.get(
+        `http://localhost:8080/register/verify-email/${otp}`
       );
 
-      const data = await response.json();
+      if (response.status === 200) {
+        setMessage({
+          text: "✅ Email verified successfully! Redirecting to login...",
+          type: "success",
+        });
 
-      if (response.ok) {
-        setMessage("✅ Email verified successfully! Redirecting to login...");
         // Redirect to login after 2 seconds
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       } else {
-        setMessage(`❌ Verification failed: ${data.message || "Invalid OTP."}`);
+        setMessage({
+          text: "❌ Verification failed. Please check your OTP and try again.",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      setMessage("⚠️ Server error. Please try again later.");
+      if (error.response?.status === 400) {
+        setMessage({ text: "❌ Invalid OTP. Please try again.", type: "error" });
+      } else if (error.response?.status === 401) {
+        setMessage({
+          text: "⚠️ Unauthorized. OTP may be expired.",
+          type: "error",
+        });
+      } else {
+        setMessage({
+          text: "⚠️ Server error. Please try again later.",
+          type: "error",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md text-center">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          Verify Your Email
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-100">
+      <div className="bg-white p-10 rounded-2xl shadow-xl border border-gray-200 w-full max-w-md flex flex-col items-center gap-6 transition-all duration-300 hover:shadow-2xl">
+        <h1 className="text-3xl font-semibold text-green-600">
+          Email Verification
+        </h1>
 
-        <p className="text-sm text-gray-500 mb-4">
-          Token: <span className="font-mono">{token}</span>
+        <p className="text-gray-600 text-center text-sm">
+          Enter the 6-digit OTP sent to your registered email address.
         </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="flex justify-center gap-3 mb-6">
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                id={`otp-${index}`}
-                type="text"
-                maxLength="1"
-                value={digit}
-                onChange={(e) => handleChange(e, index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-12 h-12 text-center text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            ))}
-          </div>
+        <input
+          type="text"
+          value={otp}
+          onChange={handleOnChange}
+          name="otp"
+          placeholder="Enter OTP"
+          maxLength={6}
+          className="w-3/4 text-center tracking-widest text-lg p-3 border-2 border-gray-300 rounded-lg outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-300"
+        />
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-2 rounded-lg text-white ${
-              isLoading
-                ? "bg-green-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700 transition"
+        {message.text && (
+          <p
+            className={`text-sm font-medium text-center ${
+              message.type === "success" ? "text-green-600" : "text-red-500"
             }`}
           >
-            {isLoading ? "Verifying..." : "Verify OTP"}
-          </button>
-        </form>
-
-        {message && (
-          <p className="mt-4 text-sm text-gray-700">{message}</p>
+            {message.text}
+          </p>
         )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className={`w-3/4 py-3 rounded-lg text-white font-semibold text-lg shadow-md transition transform ${
+            isLoading
+              ? "bg-green-300 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95"
+          }`}
+        >
+          {isLoading ? "Verifying..." : "Verify Email"}
+        </button>
+
+        <p className="text-xs text-gray-400 mt-4">
+          Didn’t receive OTP?{" "}
+          <span className="text-green-600 font-medium cursor-pointer hover:underline">
+            Resend
+          </span>
+        </p>
       </div>
     </div>
   );
