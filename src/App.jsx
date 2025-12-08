@@ -11,6 +11,7 @@ import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
 import AboutUs from "./frontend/AboutUs";
 import Setting from "./frontend/afterlogin/Setting";
 import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
+import Community from "./frontend/afterlogin/Community";
 
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/uploadrecipes" element={<UploadRecipes />} />
         <Route path="/setting" element={<Setting />} />
         <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
+        <Route path="/community" element={<Community />} />
       </Routes>
     </Router>
 

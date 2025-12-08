@@ -5,6 +5,8 @@ import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import authorImg from "../../assets/profile.jpg";
 import { FaStar, FaRegStar } from "react-icons/fa";
+import { AiFillFire } from "react-icons/ai";
+import { GiKnifeFork } from "react-icons/gi";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -31,7 +33,6 @@ const AboutRecipes = () => {
         );
         const data = response.data;
 
-        // Parse steps safely
         let parsedSteps = [];
         if (data.steps) {
           if (Array.isArray(data.steps)) {
@@ -95,8 +96,8 @@ const AboutRecipes = () => {
     Sugar: "7 g",
   };
 
-  // Dummy rating (replace with real data if available)
-  const rating = 4.2;
+  const rating = 4.7;
+  const reviews = 88;
   const totalStars = 5;
 
   if (loading)
@@ -105,8 +106,8 @@ const AboutRecipes = () => {
         <Homenavbar />
         <div className="flex justify-center items-center h-96">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading recipe...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+            <p className="mt-2 text-gray-600 text-sm">Loading recipe...</p>
           </div>
         </div>
         <Footer />
@@ -119,11 +120,11 @@ const AboutRecipes = () => {
         <Homenavbar />
         <div className="flex justify-center items-center h-96">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-red-500 mb-4">Oops!</h2>
+            <h2 className="text-xl font-bold text-red-500 mb-4">Oops!</h2>
             <p className="text-gray-600 mb-4">{error || "Recipe not found"}</p>
             <button
               onClick={() => navigate("/recipes")}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg"
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
             >
               Back to Recipes
             </button>
@@ -134,146 +135,198 @@ const AboutRecipes = () => {
     );
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 text-gray-900">
+    <div className="w-full min-h-screen bg-white text-gray-900">
       <Homenavbar />
 
-      <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Left Column */}
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          <h1 className="text-4xl font-bold leading-snug">{recipe.recipeName}</h1>
-          <p className="text-gray-700 leading-relaxed">{recipe.description}</p>
-
-          <div className="flex items-center gap-4 mt-2">
-            <span className="text-sm text-gray-500">Submitted by:</span>
-            <span className="font-semibold">{recipe.authorName || "Unknown"}</span>
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{recipe.recipeName}</h1>
+            <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
+              {[...Array(totalStars)].map((_, idx) =>
+                idx < Math.floor(rating) ? (
+                  <FaStar key={idx} className="text-yellow-400 text-base" />
+                ) : (
+                  <FaRegStar key={idx} className="text-gray-300 text-base" />
+                )
+              )}
+              <span className="font-semibold ml-1">{rating.toFixed(1)}</span>
+              <span>({reviews} Reviews)</span>
+            </div>
+            <p className="text-gray-700 text-sm">{recipe.description}</p>
           </div>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1 mt-2">
-            {[...Array(totalStars)].map((_, idx) =>
-              idx < Math.floor(rating) ? (
-                <FaStar key={idx} className="text-yellow-400" />
-              ) : (
-                <FaRegStar key={idx} className="text-gray-400" />
-              )
+          {/* Image */}
+          <div>
+            {recipe.thumbnail ? (
+              <img
+                src={`data:image/jpeg;base64,${recipe.thumbnail}`}
+                alt={recipe.recipeName}
+                className="w-100 h-64 object-cover rounded-xl shadow"
+              />
+            ) : (
+              <div className="w-full h-64 bg-gray-200 rounded-xl flex items-center justify-center">
+                <GiKnifeFork className="text-gray-400 text-4xl" />
+              </div>
             )}
-            <span className="ml-2 text-gray-600 font-medium">{rating.toFixed(1)}</span>
           </div>
-
-          {/* Recipe Image */}
-          {recipe.thumbnail && (
-            <img
-              src={`data:image/jpeg;base64,${recipe.thumbnail}`}
-              alt={recipe.recipeName}
-              className="w-full max-h-96 object-cover rounded-xl shadow-lg mt-4"
-            />
-          )}
 
           {/* Tabs */}
-          <div className="flex gap-6 mt-6 border-b pb-2 text-gray-700 font-medium text-sm">
-            {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
-              <button
-                key={tab}
-                className={`pb-2 capitalize ${
-                  activeTab === tab
-                    ? "text-red-500 border-b-2 border-red-500 font-semibold"
-                    : "hover:text-black"
-                }`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="border-b border-gray-200">
+            <div className="flex gap-4">
+              {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
+                <button
+                  key={tab}
+                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${
+                    activeTab === tab
+                      ? "text-red-600 font-semibold"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                  {activeTab === tab && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 rounded-t"></div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Tab Content */}
-          <div className="mt-6 space-y-6">
-            {/* Ingredients */}
+          <div className="space-y-8">
+            {/* Ingredients Tab */}
             {activeTab === "ingredients" && (
-              <ul className="space-y-3 bg-white p-6 rounded-xl shadow">
-                {renderIngredients().map((item, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <input
-                      type="checkbox"
-                      className="mr-3 mt-1 w-4 h-4 text-red-500 bg-gray-100 border-gray-300 rounded"
-                    />
-                    <span className="text-gray-700">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <div className="space-y-4">
+                <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                  <h2 className="font-semibold mb-2">Ingredients</h2>
+                  <ul className="space-y-2">
+                    {renderIngredients().map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <input type="checkbox" className="w-4 h-4 mt-1" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            {/* Instructions */}
-            {activeTab === "instructions" && (
-              <ul className="space-y-3 bg-white p-6 rounded-xl shadow">
-                {renderInstructions().map((step, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <input
-                      type="checkbox"
-                      className="mr-3 mt-1 w-4 h-4 text-red-500 bg-gray-100 border-gray-300 rounded"
+                {/* Rating & Comment Section */}
+                <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                  <h2 className="font-semibold mb-2">Reviews</h2>
+                  <div className="flex items-center mb-2 gap-2">
+                    {[...Array(totalStars)].map((_, idx) =>
+                      idx < Math.floor(rating) ? (
+                        <FaStar key={idx} className="text-yellow-400 text-base" />
+                      ) : (
+                        <FaRegStar key={idx} className="text-gray-300 text-base" />
+                      )
+                    )}
+                    <span className="ml-2 text-sm font-semibold">{rating.toFixed(1)} ({reviews} Reviews)</span>
+                  </div>
+                  <div>
+                    <textarea
+                      placeholder="Write your comment..."
+                      className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
+                      rows={3}
                     />
-                    <span className="font-semibold mr-2">{idx + 1}.</span>
-                    <span className="text-gray-700">{step}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Video */}
-            {activeTab === "video" && (
-              <div className="bg-white p-6 rounded-xl shadow">
-                {recipe.video ? (
-                  <video controls className="w-full h-64 rounded-lg">
-                    <source src={recipe.video} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                ) : (
-                  <p className="text-gray-700">No video available.</p>
-                )}
+                    <button className="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">
+                      Submit
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Nutrients */}
-            {activeTab === "nutrients" && (
-              <div className="bg-white p-6 rounded-xl shadow">
-                <ul className="text-gray-700 space-y-2">
-                  {Object.entries(staticNutrients).map(([key, value]) => (
-                    <li key={key} className="flex justify-between py-2 border-b">
-                      <span className="font-medium">{key}</span>
-                      <span>{value}</span>
+            {/* Instructions Tab */}
+            {activeTab === "instructions" && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <h2 className="font-semibold mb-2">Instructions</h2>
+                <ul className="space-y-4">
+                  {renderInstructions().map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <p>{step}</p>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
+
+            {/* Video Tab */}
+            {activeTab === "video" && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <h2 className="font-semibold mb-2">Video Tutorial</h2>
+                {recipe.video ? (
+                  <div className="relative pt-[56.25%] rounded-xl overflow-hidden bg-black">
+                    <video controls className="absolute top-0 left-0 w-full h-full" />
+                  </div>
+                ) : (
+                  <p className="text-gray-600 text-sm">No video available.</p>
+                )}
+              </div>
+            )}
+
+            {/* Nutrients Tab */}
+            {activeTab === "nutrients" && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <h2 className="font-semibold mb-2">Nutrition Facts</h2>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {Object.entries(staticNutrients).map(([key, value]) => (
+                    <div key={key} className="bg-gray-50 p-2 rounded border border-gray-200 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        {(key === "Calories" && <AiFillFire className="text-red-600" />) ||
+                          (key === "Protein" && <GiKnifeFork className="text-red-600" />)}
+                        {key}
+                      </span>
+                      <span className="font-semibold">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column - Author & Details */}
-        <div className="space-y-6">
-          <div className="flex flex-col items-center text-center bg-gradient-to-br from-red-100 to-red-200 p-6 rounded-xl shadow-lg border">
-            <div className="w-28 h-28 rounded-full bg-gray-200 overflow-hidden mb-4 border-4 border-white shadow-md">
+        {/* Right Sidebar */}
+        <div className="space-y-4 lg:sticky lg:top-6">
+          {/* Profile */}
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-center text-sm">
+            <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-2">
               <img src={authorImg} alt="Author" className="w-full h-full object-cover" />
             </div>
-            <h3 className="font-bold text-gray-800 text-xl">{recipe.authorName || "Author"}</h3>
-            <p className="text-gray-600 text-sm mt-1">Top Chef</p>
-
-            {/* Social Icons Placeholder */}
-            <div className="flex gap-3 mt-3">
-              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
-              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
-              <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
-            </div>
+            <h3 className="font-semibold">Hi! I'm ARYAN</h3>
+            <p className="text-gray-600 text-xs mb-2">Nice to meet you!</p>
+            <p className="text-gray-700 text-xs mb-2">Lorem ipsum dolor sit amet...</p>
+            <button className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">Learn More</button>
           </div>
 
-          {/* Quick Info Box */}
-          <div className="bg-white p-4 rounded-xl shadow space-y-2 text-gray-700">
-            <p>
-              <span className="font-semibold">Cook Time:</span> {recipe.cookTime || "N/A"}
-            </p>
-            <p>
-              <span className="font-semibold">Category:</span> {recipe.category || "N/A"}
-            </p>
+          {/* Similar Recipes - Vertical */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+            <h2 className="font-semibold mb-2">Similar Recipes</h2>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                >
+                  <div className="w-14 h-14 bg-gray-200 rounded overflow-hidden">
+                    <img
+                      src="https://via.placeholder.com/56"
+                      alt={`Recipe ${item}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="font-medium text-sm truncate">Recipe Name {item}</p>
+                    <p className="text-xs text-gray-500">30 mins • 4.5⭐</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

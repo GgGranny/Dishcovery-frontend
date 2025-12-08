@@ -3,6 +3,7 @@ import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 
 const Profile = () => {
+  // Load username from Local Storage
   const username = localStorage.getItem("username") || "User";
 
   // Load profile image from localStorage
@@ -21,8 +22,39 @@ const Profile = () => {
     activity: 0,
   });
 
-  // Load counts from localStorage
+  // Initialize sample activity data in localStorage
   useEffect(() => {
+    if (!localStorage.getItem("activity")) {
+      const sampleActivity = [
+        {
+          title: "Posted a new recipe",
+          subtitle: "Mediterranean Quinoa Bowl with Roasted Vegetables",
+          date: "1/15/2024",
+        },
+        {
+          title: "Liked a recipe",
+          subtitle: "Thai Green Curry with Jasmine Rice by Siriporn Thai",
+          date: "1/14/2024",
+        },
+        {
+          title: "Saved a recipe",
+          subtitle: "Homemade Margherita Pizza with Fresh Basil by Marco Rossi",
+          date: "1/12/2024",
+        },
+        {
+          title: "Commented on a recipe",
+          subtitle: "Chocolate Lava Cake with Vanilla Ice Cream by Emily Chen",
+          date: "1/12/2024",
+        },
+        {
+          title: "New follower",
+          subtitle: "Alex Thompson started following you",
+          date: "1/10/2024",
+        },
+      ];
+      localStorage.setItem("activity", JSON.stringify(sampleActivity));
+    }
+
     setCounts({
       my: JSON.parse(localStorage.getItem("myRecipes") || "[]").length,
       saved: JSON.parse(localStorage.getItem("savedRecipes") || "[]").length,
@@ -31,6 +63,7 @@ const Profile = () => {
     });
   }, []);
 
+  // Upload Profile Image
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -48,6 +81,7 @@ const Profile = () => {
     document.getElementById("profileUpload").click();
   };
 
+  // Render active tab content
   const renderTabContent = () => {
     const dataMap = {
       my: JSON.parse(localStorage.getItem("myRecipes") || "[]"),
@@ -56,6 +90,27 @@ const Profile = () => {
       activity: JSON.parse(localStorage.getItem("activity") || "[]"),
     };
 
+    if (activeTab === "activity") {
+      return dataMap.activity.length > 0 ? (
+        <div className="mt-6 flex flex-col gap-4">
+          {dataMap.activity.map((item, i) => (
+            <div
+              key={i}
+              className="bg-white shadow-md rounded-lg p-4 border border-gray-200 flex flex-col sm:flex-row sm:justify-between"
+            >
+              <div>
+                <p className="font-medium">{item.title}</p>
+                <p className="text-gray-600 text-sm mt-1">{item.subtitle}</p>
+              </div>
+              <p className="text-gray-400 text-xs mt-2 sm:mt-0">{item.date}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-6 text-gray-500 italic">(No activity yet)</p>
+      );
+    }
+
     return dataMap[activeTab].length > 0 ? (
       <ul className="mt-6 text-gray-700">
         {dataMap[activeTab].map((item, i) => (
@@ -63,7 +118,6 @@ const Profile = () => {
             {activeTab === "my" && "🍽 "}
             {activeTab === "saved" && "💾 "}
             {activeTab === "liked" && "❤️ "}
-            {activeTab === "activity" && "📝 "}
             {item}
           </li>
         ))}
@@ -74,10 +128,10 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       <Homenavbar />
 
-      <div className="max-w-6xl mx-auto mt-10 px-5">
+      <div className="flex-1 max-w-6xl mx-auto mt-10 px-5 pb-20">
         <div className="flex items-start gap-6">
           {/* Profile Picture */}
           <div className="relative w-28 h-28">
