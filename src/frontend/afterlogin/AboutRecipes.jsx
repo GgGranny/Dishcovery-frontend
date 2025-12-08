@@ -19,6 +19,59 @@ const AboutRecipes = () => {
 
   const token = localStorage.getItem("token");
 
+  // -----------------------------------------------------
+  // FIXED parseSteps() — CLEAN & STABLE
+  // -----------------------------------------------------
+  const parseSteps = (steps) => {
+    let parsed = [];
+
+    try {
+      // CASE A — array with JSON string inside
+      if (Array.isArray(steps)) {
+        const first = steps[0];
+
+        if (typeof first === "string" && first.trim().startsWith("[")) {
+          parsed = JSON.parse(first);
+        } else {
+          parsed = steps;
+        }
+      }
+
+      // CASE B — steps is a raw string with breaks
+      else if (typeof steps === "string") {
+        parsed = steps
+          .split(/\n|,|[0-9]+\./)
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+
+      // CASE C — object
+      else if (typeof steps === "object" && steps !== null) {
+        parsed = Object.values(steps).flat().map(String);
+      }
+
+      // FINAL CLEAN FIXED
+      parsed = parsed
+        .map(String)
+        .map((s) =>
+          s
+            .replace(/^\s*"|"\s*$/g, "") // remove outer quotes
+            .replace(/^\[/, "")         // remove [
+            .replace(/\]$/, "")         // remove ]
+            .replace(/\\n/g, " ")        // fix newline escapes
+            .trim()
+        )
+        .filter(Boolean);
+
+      return parsed;
+    } catch (e) {
+      console.error("STEP PARSE ERROR:", e);
+      return [];
+    }
+  };
+
+  // -----------------------------------------------------
+
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!token) {
@@ -26,40 +79,21 @@ const AboutRecipes = () => {
         setLoading(false);
         return;
       }
+
       try {
         const response = await axios.get(
           `http://localhost:8080/api/recipes/recipe/r1/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+
         const data = response.data;
 
-        let parsedSteps = [];
-        if (data.steps) {
-          if (Array.isArray(data.steps)) {
-            parsedSteps = data.steps.flatMap((s) => {
-              if (Array.isArray(s)) return s.map((step) => step.trim());
-              if (typeof s === "string") return [s.trim()];
-              return [];
-            });
-          } else if (typeof data.steps === "string") {
-            parsedSteps = data.steps
-              .split(/\n|[0-9]+\./)
-              .map((s) => s.trim())
-              .filter(Boolean);
-          } else if (typeof data.steps === "object") {
-            parsedSteps = Object.values(data.steps).flatMap((s) => {
-              if (Array.isArray(s)) return s.map((step) => step.trim());
-              if (typeof s === "string") return [s.trim()];
-              return [];
-            });
-          }
-        }
+        const cleanSteps = parseSteps(data.steps);
 
-        parsedSteps = parsedSteps.map((step) =>
-          step.replace(/^\[|\]$/g, "").replace(/^"|"$/g, "")
-        );
-
-        setRecipe({ ...data, parsedSteps });
+        setRecipe({
+          ...data,
+          steps: cleanSteps,
+        });
       } catch (err) {
         console.error(err);
         setError("Failed to load recipe.");
@@ -71,21 +105,21 @@ const AboutRecipes = () => {
     fetchRecipe();
   }, [id, token]);
 
+
+  // INGREDIENT PARSER
   const renderIngredients = () => {
     if (!recipe) return [];
     if (Array.isArray(recipe.ingredients)) return recipe.ingredients;
+
     if (typeof recipe.ingredients === "string")
       return recipe.ingredients
         .split(/,|\n/)
         .map((i) => i.trim())
         .filter(Boolean);
+
     return ["No ingredients listed"];
   };
 
-  const renderInstructions = () => {
-    if (!recipe || !recipe.parsedSteps) return ["No instructions available"];
-    return recipe.parsedSteps;
-  };
 
   const staticNutrients = {
     Calories: "250 kcal",
@@ -139,8 +173,8 @@ const AboutRecipes = () => {
       <Homenavbar />
 
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{recipe.recipeName}</h1>
@@ -164,7 +198,7 @@ const AboutRecipes = () => {
               <img
                 src={`data:image/jpeg;base64,${recipe.thumbnail}`}
                 alt={recipe.recipeName}
-                className="w-100 h-64 object-cover rounded-xl shadow"
+                className="w-full h-64 object-cover rounded-xl shadow"
               />
             ) : (
               <div className="w-full h-64 bg-gray-200 rounded-xl flex items-center justify-center">
@@ -179,11 +213,10 @@ const AboutRecipes = () => {
               {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
                 <button
                   key={tab}
-                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${
-                    activeTab === tab
-                      ? "text-red-600 font-semibold"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${activeTab === tab
+                    ? "text-red-600 font-semibold"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab}
@@ -197,54 +230,28 @@ const AboutRecipes = () => {
 
           {/* Tab Content */}
           <div className="space-y-8">
-            {/* Ingredients Tab */}
-            {activeTab === "ingredients" && (
-              <div className="space-y-4">
-                <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-                  <h2 className="font-semibold mb-2">Ingredients</h2>
-                  <ul className="space-y-2">
-                    {renderIngredients().map((item, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <input type="checkbox" className="w-4 h-4 mt-1" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
 
-                {/* Rating & Comment Section */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-                  <h2 className="font-semibold mb-2">Reviews</h2>
-                  <div className="flex items-center mb-2 gap-2">
-                    {[...Array(totalStars)].map((_, idx) =>
-                      idx < Math.floor(rating) ? (
-                        <FaStar key={idx} className="text-yellow-400 text-base" />
-                      ) : (
-                        <FaRegStar key={idx} className="text-gray-300 text-base" />
-                      )
-                    )}
-                    <span className="ml-2 text-sm font-semibold">{rating.toFixed(1)} ({reviews} Reviews)</span>
-                  </div>
-                  <div>
-                    <textarea
-                      placeholder="Write your comment..."
-                      className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
-                      rows={3}
-                    />
-                    <button className="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">
-                      Submit
-                    </button>
-                  </div>
-                </div>
+            {/* Ingredients */}
+            {activeTab === "ingredients" && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <h2 className="font-semibold mb-2">Ingredients</h2>
+                <ul className="space-y-2">
+                  {renderIngredients().map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <input type="checkbox" className="w-4 h-4 mt-1" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
-            {/* Instructions Tab */}
+            {/* Instructions */}
             {activeTab === "instructions" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Instructions</h2>
                 <ul className="space-y-4">
-                  {renderInstructions().map((step, idx) => (
+                  {recipe.steps.steps?.map((step, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
                         {idx + 1}
@@ -270,16 +277,23 @@ const AboutRecipes = () => {
               </div>
             )}
 
-            {/* Nutrients Tab */}
+            {/* Nutrients */}
             {activeTab === "nutrients" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Nutrition Facts</h2>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {Object.entries(staticNutrients).map(([key, value]) => (
-                    <div key={key} className="bg-gray-50 p-2 rounded border border-gray-200 flex items-center justify-between">
+                    <div
+                      key={key}
+                      className="bg-gray-50 p-2 rounded border border-gray-200 flex items-center justify-between"
+                    >
                       <span className="flex items-center gap-1">
-                        {(key === "Calories" && <AiFillFire className="text-red-600" />) ||
-                          (key === "Protein" && <GiKnifeFork className="text-red-600" />)}
+                        {(key === "Calories" && (
+                          <AiFillFire className="text-red-600" />
+                        )) ||
+                          (key === "Protein" && (
+                            <GiKnifeFork className="text-red-600" />
+                          ))}
                         {key}
                       </span>
                       <span className="font-semibold">{value}</span>
@@ -291,9 +305,8 @@ const AboutRecipes = () => {
           </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Sidebar */}
         <div className="space-y-4 lg:sticky lg:top-6">
-          {/* Profile */}
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-center text-sm">
             <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-2">
               <img src={authorImg} alt="Author" className="w-full h-full object-cover" />
@@ -301,10 +314,11 @@ const AboutRecipes = () => {
             <h3 className="font-semibold">Hi! I'm ARYAN</h3>
             <p className="text-gray-600 text-xs mb-2">Nice to meet you!</p>
             <p className="text-gray-700 text-xs mb-2">Lorem ipsum dolor sit amet...</p>
-            <button className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">Learn More</button>
+            <button className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">
+              Learn More
+            </button>
           </div>
 
-          {/* Similar Recipes - Vertical */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
             <h2 className="font-semibold mb-2">Similar Recipes</h2>
             <div className="space-y-3">
