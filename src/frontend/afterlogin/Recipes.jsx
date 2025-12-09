@@ -10,6 +10,7 @@ const Recipes = () => {
   const [filteredRecipes, setFilteredRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pageNo, setPageNo] = useState(1);
 
   const [filters, setFilters] = useState({
     category: [],
@@ -31,8 +32,7 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          "http://localhost:8080/api/recipes/recipe/r1/7",
-          { headers: { Authorization: `Bearer ${token}` } }
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${6}`
         );
 
         const recipesArray = Array.isArray(res.data) ? res.data : [res.data];
