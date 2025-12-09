@@ -7,6 +7,7 @@ import authorImg from "../../assets/profile.jpg";
 import { FaStar, FaRegStar } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
+import VideoPlayer from "../../components/VideoPlayer";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -16,6 +17,7 @@ const AboutRecipes = () => {
   const [activeTab, setActiveTab] = useState("ingredients");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -82,14 +84,15 @@ const AboutRecipes = () => {
 
       try {
         const response = await axios.get(
-          `http://localhost:8080/api/recipes/recipe/r1/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          `http://localhost:8080/api/recipes/recipe/r1/${id}`
         );
 
         const data = response.data;
 
         const cleanSteps = parseSteps(data.steps);
-
+        const video = await axios.get(`http://localhost:8080/api/v1/videos/stream/segment/${data.video?.videoId}/master.m3u8`);
+        setVideoUrl(video.config.url);
+        console.log(video);
         setRecipe({
           ...data,
           steps: cleanSteps,
@@ -251,14 +254,15 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Instructions</h2>
                 <ul className="space-y-4">
-                  {recipe.steps.steps?.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <p>{step}</p>
-                    </li>
-                  ))}
+                  {
+                    recipe.steps.steps?.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <p>{step}</p>
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}
@@ -268,9 +272,7 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Video Tutorial</h2>
                 {recipe.video ? (
-                  <div className="relative pt-[56.25%] rounded-xl overflow-hidden bg-black">
-                    <video controls className="absolute top-0 left-0 w-full h-full" />
-                  </div>
+                  <VideoPlayer src={videoUrl} />
                 ) : (
                   <p className="text-gray-600 text-sm">No video available.</p>
                 )}
