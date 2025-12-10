@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, BrowserRouter } from "react-router-dom";
 import Landing from "./frontend/Landing";
 import Login from "./frontend/Login";
 import Signup from "./frontend/Signup";
@@ -16,7 +16,7 @@ import Community from "./frontend/afterlogin/Community";
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter >
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -32,7 +32,8 @@ function App() {
         <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
         <Route path="/community" element={<Community />} />
       </Routes>
-    </Router>
+
+    </BrowserRouter>
 
     // <Otp />
 

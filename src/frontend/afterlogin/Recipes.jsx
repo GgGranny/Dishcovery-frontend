@@ -31,8 +31,8 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          "http://localhost:8080/api/recipes/recipe/r1/4",
-          { headers: { Authorization: `Bearer ${token}` } }
+          "http://localhost:8080/api/recipes/recipe/r1/7",
+          { headers: { Authorization: `Bearer ${token}` } }     
         );
 
         const recipesArray = Array.isArray(res.data) ? res.data : [res.data];

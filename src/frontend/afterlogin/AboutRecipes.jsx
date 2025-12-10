@@ -16,9 +16,12 @@ const AboutRecipes = () => {
   const [activeTab, setActiveTab] = useState("ingredients");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [comments, setComments] = useState([]);
+  const [commentInput, setCommentInput] = useState("");
 
   const token = localStorage.getItem("token");
 
+  // Fetch recipe and comments
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!token) {
@@ -31,8 +34,10 @@ const AboutRecipes = () => {
           `http://localhost:8080/api/recipes/recipe/r1/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+
         const data = response.data;
 
+        // Parse steps
         let parsedSteps = [];
         if (data.steps) {
           if (Array.isArray(data.steps)) {
@@ -54,12 +59,18 @@ const AboutRecipes = () => {
             });
           }
         }
-
         parsedSteps = parsedSteps.map((step) =>
           step.replace(/^\[|\]$/g, "").replace(/^"|"$/g, "")
         );
 
         setRecipe({ ...data, parsedSteps });
+
+        // Fetch comments from backend
+        const commentsRes = await axios.get(
+          `http://localhost:8080/api/comments/c1/comment/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setComments(commentsRes.data || []);
       } catch (err) {
         console.error(err);
         setError("Failed to load recipe.");
@@ -71,6 +82,7 @@ const AboutRecipes = () => {
     fetchRecipe();
   }, [id, token]);
 
+  // Render ingredients
   const renderIngredients = () => {
     if (!recipe) return [];
     if (Array.isArray(recipe.ingredients)) return recipe.ingredients;
@@ -82,6 +94,7 @@ const AboutRecipes = () => {
     return ["No ingredients listed"];
   };
 
+  // Render instructions
   const renderInstructions = () => {
     if (!recipe || !recipe.parsedSteps) return ["No instructions available"];
     return recipe.parsedSteps;
@@ -99,6 +112,32 @@ const AboutRecipes = () => {
   const rating = 4.7;
   const reviews = 88;
   const totalStars = 5;
+
+  // Submit comment
+  const submitComment = async () => {
+    if (!commentInput) return;
+    try {
+      const username = "Aryan"; // Replace with actual logged-in user
+      await axios.post(
+        `http://localhost:8080/api/comments/c1/comment`,
+        null, // no body; backend uses query params
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            recipeId: id,
+            content: commentInput,
+            username,
+          },
+        }
+      );
+
+      setComments((prev) => [...prev, { comment: commentInput, user: username }]);
+      setCommentInput("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit comment");
+    }
+  };
 
   if (loading)
     return (
@@ -137,7 +176,6 @@ const AboutRecipes = () => {
   return (
     <div className="w-full min-h-screen bg-white text-gray-900">
       <Homenavbar />
-
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -197,7 +235,7 @@ const AboutRecipes = () => {
 
           {/* Tab Content */}
           <div className="space-y-8">
-            {/* Ingredients Tab */}
+            {/* Ingredients & Comments */}
             {activeTab === "ingredients" && (
               <div className="space-y-4">
                 <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
@@ -212,28 +250,35 @@ const AboutRecipes = () => {
                   </ul>
                 </div>
 
-                {/* Rating & Comment Section */}
+                {/* Comment Section */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-                  <h2 className="font-semibold mb-2">Reviews</h2>
-                  <div className="flex items-center mb-2 gap-2">
-                    {[...Array(totalStars)].map((_, idx) =>
-                      idx < Math.floor(rating) ? (
-                        <FaStar key={idx} className="text-yellow-400 text-base" />
-                      ) : (
-                        <FaRegStar key={idx} className="text-gray-300 text-base" />
-                      )
+                  <h2 className="font-semibold mb-2">Comments</h2>
+                  <textarea
+                    placeholder="Write your comment..."
+                    className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
+                    rows={3}
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                  />
+                  <button
+                    onClick={submitComment}
+                    className="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded"
+                  >
+                    Submit
+                  </button>
+
+                  {/* Display Comments */}
+                  <div className="mt-4 space-y-2">
+                    {comments.length === 0 ? (
+                      <p className="text-gray-500 italic">No comments yet</p>
+                    ) : (
+                      comments.map((c, idx) => (
+                        <div key={idx} className="border-b border-gray-100 py-2">
+                          <p className="text-sm font-semibold">{c.user || "Anonymous"}</p>
+                          <p className="text-sm text-gray-700">{c.comment}</p>
+                        </div>
+                      ))
                     )}
-                    <span className="ml-2 text-sm font-semibold">{rating.toFixed(1)} ({reviews} Reviews)</span>
-                  </div>
-                  <div>
-                    <textarea
-                      placeholder="Write your comment..."
-                      className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
-                      rows={3}
-                    />
-                    <button className="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">
-                      Submit
-                    </button>
                   </div>
                 </div>
               </div>
@@ -256,7 +301,7 @@ const AboutRecipes = () => {
               </div>
             )}
 
-            {/* Video Tab */}
+            {/* Video & Nutrients Tabs */}
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Video Tutorial</h2>
@@ -270,7 +315,6 @@ const AboutRecipes = () => {
               </div>
             )}
 
-            {/* Nutrients Tab */}
             {activeTab === "nutrients" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
                 <h2 className="font-semibold mb-2">Nutrition Facts</h2>
@@ -293,7 +337,6 @@ const AboutRecipes = () => {
 
         {/* Right Sidebar */}
         <div className="space-y-4 lg:sticky lg:top-6">
-          {/* Profile */}
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-center text-sm">
             <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-2">
               <img src={authorImg} alt="Author" className="w-full h-full object-cover" />
@@ -304,7 +347,7 @@ const AboutRecipes = () => {
             <button className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-3 rounded">Learn More</button>
           </div>
 
-          {/* Similar Recipes - Vertical */}
+          {/* Similar Recipes */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
             <h2 className="font-semibold mb-2">Similar Recipes</h2>
             <div className="space-y-3">
@@ -330,7 +373,6 @@ const AboutRecipes = () => {
           </div>
         </div>
       </div>
-
       <Footer />
     </div>
   );

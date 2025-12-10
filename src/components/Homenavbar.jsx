@@ -7,7 +7,12 @@ const Homenavbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // FIXED LOGOUT FUNCTION
+  // Load profile image from localStorage
+  const [profileImg] = useState(
+    localStorage.getItem("profileImageDataUrl") || null
+  );
+
+  // LOGOUT FUNCTION
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
 
@@ -15,9 +20,9 @@ const Homenavbar = () => {
       await fetch("http://localhost:8080/api/auth/logout", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refreshToken })
+        body: JSON.stringify({ refreshToken }),
       });
     } catch (error) {
       console.error("Logout error:", error);
@@ -26,6 +31,7 @@ const Homenavbar = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("profileImageDataUrl");
 
     window.location.href = "/";
   };
@@ -71,12 +77,21 @@ const Homenavbar = () => {
             Create
           </NavLink>
 
+          {/* Profile Button */}
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white hover:shadow-sm transition"
+              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden hover:shadow-sm transition"
             >
-              <HiUser className="text-xl text-gray-700" />
+              {profileImg ? (
+                <img
+                  src={profileImg}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <HiUser className="text-xl text-gray-700" />
+              )}
             </button>
 
             {profileOpen && (
@@ -99,15 +114,24 @@ const Homenavbar = () => {
         {/* MOBILE SECTION */}
         <div className="ml-auto md:hidden flex items-center gap-2">
 
+          {/* Mobile Profile Icon */}
           <div className="relative">
             <button
               onClick={() => {
                 setProfileOpen(!profileOpen);
                 setMenuOpen(false);
               }}
-              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white hover:shadow-sm transition"
+              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden hover:shadow-sm transition"
             >
-              <HiUser className="text-lg text-gray-700" />
+              {profileImg ? (
+                <img
+                  src={profileImg}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <HiUser className="text-lg text-gray-700" />
+              )}
             </button>
 
             {profileOpen && (
@@ -126,6 +150,7 @@ const Homenavbar = () => {
             )}
           </div>
 
+          {/* Mobile Menu Button */}
           <button
             className="text-3xl text-gray-700"
             onClick={() => {
@@ -138,6 +163,7 @@ const Homenavbar = () => {
         </div>
       </div>
 
+      {/* MOBILE MENU */}
       {menuOpen && (
         <div>
           <div className="flex items-center justify-between pt-4 border-t px-4">
