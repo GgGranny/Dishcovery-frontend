@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, BrowserRouter } from "react-router-dom";
 import Landing from "./frontend/Landing";
 import Login from "./frontend/Login";
 import Signup from "./frontend/Signup";
@@ -8,7 +8,7 @@ import Homepage from "./frontend/afterlogin/Homepage";
 import Profile from "./frontend/afterlogin/Profile";
 import Recipes from "./frontend/afterlogin/Recipes";
 import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
-import AboutUs from "./frontend/AboutUs";
+
 import Setting from "./frontend/afterlogin/Setting";
 import Comments from "./components/Comments";
 import Payments from "./components/Payment";
@@ -16,11 +16,14 @@ import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 import Community from "./frontend/afterlogin/Community";
 import PaymentSuccess from "./components/PaymentSuccess";
 import PaymentFail from "./components/PaymentFail";
+import About from "./frontend/About";
+import AboutUs from "./frontend/afterlogin/AboutUs";
+import Communities from "./frontend/Communities";
 
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter >
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -30,6 +33,7 @@ function App() {
         <Route path="/payment" element={<Payments />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/aboutus" element={<AboutUs />} />
+        <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/uploadrecipes" element={<UploadRecipes />} />
@@ -39,8 +43,10 @@ function App() {
         <Route path="/community" element={<Community />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/fail" element={<PaymentFail />} />
+        <Route path="/communities" element={<Communities />} />
       </Routes>
-    </Router>
+
+    </BrowserRouter>
 
     // <Otp />
 

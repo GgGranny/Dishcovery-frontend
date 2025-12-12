@@ -7,7 +7,10 @@ const Homenavbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // FIXED LOGOUT FUNCTION
+  const [profileImg] = useState(
+    localStorage.getItem("profileImageDataUrl") || null
+  );
+
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
 
@@ -15,18 +18,15 @@ const Homenavbar = () => {
       await fetch("http://localhost:8080/api/auth/logout", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ refreshToken })
+        body: JSON.stringify({ refreshToken }),
       });
     } catch (error) {
       console.error("Logout error:", error);
     }
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-
+    localStorage.clear();
     window.location.href = "/";
   };
 
@@ -42,48 +42,125 @@ const Homenavbar = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // 🔥 GLOBAL ACTIVE LINK STYLE
+  const activeClass = "text-green-600 font-semibold";
+
   return (
     <header className="w-full bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center py-4 px-4">
 
         {/* LEFT: Logo */}
-        <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={() => window.scrollTo(0, 0)}
+        >
           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
           <span className="text-2xl font-bold text-gray-800">Discovery</span>
         </div>
 
-        {/* CENTER NAV (desktop) */}
+        {/* CENTER NAV (Desktop) */}
         <nav className="hidden md:flex flex-1 justify-center gap-8">
-          <NavLink to="/homepage" className="nav-link">Home</NavLink>
-          <NavLink to="/recipes" className="nav-link">Recipes</NavLink>
-          <NavLink to="/categories" className="nav-link">Categories</NavLink>
-          <NavLink to="/community" className="nav-link">Community</NavLink>
-          <NavLink to="/aboutus" className="nav-link">About</NavLink>
-        </nav>
-
-        {/* RIGHT (desktop) */}
-        <div className="hidden md:flex items-center gap-4 ml-auto">
 
           <NavLink
+            to="/homepage"
+            onClick={() => window.scrollTo(0, 0)}
+            className={({ isActive }) =>
+              isActive ? activeClass : "text-gray-700 hover:text-green-600"
+            }
+          >
+            Home
+          </NavLink>
+
+          <NavLink
+            to="/recipes"
+            onClick={() => window.scrollTo(0, 0)}
+            className={({ isActive }) =>
+              isActive ? activeClass : "text-gray-700 hover:text-green-600"
+            }
+          >
+            Recipes
+          </NavLink>
+
+          <NavLink
+            to="/categories"
+            onClick={() => window.scrollTo(0, 0)}
+            className={({ isActive }) =>
+              isActive ? activeClass : "text-gray-700 hover:text-green-600"
+            }
+          >
+            Categories
+          </NavLink>
+
+          <NavLink
+            to="/community"
+            onClick={() => window.scrollTo(0, 0)}
+            className={({ isActive }) =>
+              isActive ? activeClass : "text-gray-700 hover:text-green-600"
+            }
+          >
+            Community
+          </NavLink>
+
+          <NavLink
+            to="/aboutus"
+            onClick={() => window.scrollTo(0, 0)}
+            className={({ isActive }) =>
+              isActive ? activeClass : "text-gray-700 hover:text-green-600"
+            }
+          >
+            About
+          </NavLink>
+        </nav>
+
+        {/* RIGHT (Desktop) */}
+        <div className="hidden md:flex items-center gap-4 ml-auto">
+          <NavLink
             to="/uploadrecipes"
+            onClick={() => window.scrollTo(0, 0)}
             className="px-5 py-2 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition"
           >
             Create
           </NavLink>
 
+          {/* Profile Button */}
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white hover:shadow-sm transition"
+              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden hover:shadow-sm transition"
             >
-              <HiUser className="text-xl text-gray-700" />
+              {profileImg ? (
+                <img src={profileImg} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <HiUser className="text-xl text-gray-700" />
+              )}
             </button>
 
             {profileOpen && (
               <div className="absolute right-0 mt-3 w-48 bg-white shadow-lg rounded-xl overflow-hidden border">
-                <NavLink to="/profile" className="block px-4 py-3 hover:bg-gray-100">My Profile</NavLink>
-                <NavLink to="/setting" className="block px-4 py-3 hover:bg-gray-100">Settings</NavLink>
-                <NavLink to="/saved" className="block px-4 py-3 hover:bg-gray-100">Saved Recipes</NavLink>
+
+                <NavLink
+                  to="/profile"
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  My Profile
+                </NavLink>
+
+                <NavLink
+                  to="/setting"
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  Settings
+                </NavLink>
+
+                <NavLink
+                  to="/saved"
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  Saved Recipes
+                </NavLink>
 
                 <button
                   onClick={handleLogout}
@@ -98,23 +175,56 @@ const Homenavbar = () => {
 
         {/* MOBILE SECTION */}
         <div className="ml-auto md:hidden flex items-center gap-2">
-
+          {/* Mobile Profile */}
           <div className="relative">
             <button
               onClick={() => {
                 setProfileOpen(!profileOpen);
                 setMenuOpen(false);
               }}
-              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white hover:shadow-sm transition"
+              className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden"
             >
-              <HiUser className="text-lg text-gray-700" />
+              {profileImg ? (
+                <img src={profileImg} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <HiUser className="text-lg text-gray-700" />
+              )}
             </button>
 
             {profileOpen && (
               <div className="absolute right-0 top-full mt-2 w-44 bg-white shadow-lg rounded-xl overflow-hidden border z-50">
-                <NavLink to="/profile" className="block px-4 py-3 hover:bg-gray-100">My Profile</NavLink>
-                <NavLink to="/setting" className="block px-4 py-3 hover:bg-gray-100">Settings</NavLink>
-                <NavLink to="/saved" className="block px-4 py-3 hover:bg-gray-100">Saved Recipes</NavLink>
+                <NavLink
+                  to="/profile"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.scrollTo(0, 0);
+                  }}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  My Profile
+                </NavLink>
+
+                <NavLink
+                  to="/setting"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.scrollTo(0, 0);
+                  }}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  Settings
+                </NavLink>
+
+                <NavLink
+                  to="/saved"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.scrollTo(0, 0);
+                  }}
+                  className="block px-4 py-3 hover:bg-gray-100"
+                >
+                  Saved Recipes
+                </NavLink>
 
                 <button
                   onClick={handleLogout}
@@ -126,6 +236,7 @@ const Homenavbar = () => {
             )}
           </div>
 
+          {/* Mobile Menu Button */}
           <button
             className="text-3xl text-gray-700"
             onClick={() => {
@@ -138,13 +249,17 @@ const Homenavbar = () => {
         </div>
       </div>
 
+      {/* MOBILE MENU */}
       {menuOpen && (
         <div>
           <div className="flex items-center justify-between pt-4 border-t px-4">
             <NavLink
               to="/uploadrecipes"
+              onClick={() => {
+                setMenuOpen(false);
+                window.scrollTo(0, 0);
+              }}
               className="px-4 py-2 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition"
-              onClick={() => setMenuOpen(false)}
             >
               Create
             </NavLink>
@@ -152,11 +267,72 @@ const Homenavbar = () => {
 
           <div className="md:hidden bg-white shadow-lg p-6 space-y-4">
             <div className="flex flex-col gap-3 text-lg">
-              <NavLink to="/homepage" onClick={() => setMenuOpen(false)}>Home</NavLink>
-              <NavLink to="/recipes" onClick={() => setMenuOpen(false)}>Recipes</NavLink>
-              <NavLink to="/categories" onClick={() => setMenuOpen(false)}>Categories</NavLink>
-              <NavLink to="/community" onClick={() => setMenuOpen(false)}>Community</NavLink>
-              <NavLink to="/aboutus" onClick={() => setMenuOpen(false)}>About</NavLink>
+
+              <NavLink
+                to="/homepage"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.scrollTo(0, 0);
+                }}
+                className={({ isActive }) =>
+                  isActive ? activeClass : "text-gray-700"
+                }
+              >
+                Home
+              </NavLink>
+
+              <NavLink
+                to="/recipes"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.scrollTo(0, 0);
+                }}
+                className={({ isActive }) =>
+                  isActive ? activeClass : "text-gray-700"
+                }
+              >
+                Recipes
+              </NavLink>
+
+              <NavLink
+                to="/categories"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.scrollTo(0, 0);
+                }}
+                className={({ isActive }) =>
+                  isActive ? activeClass : "text-gray-700"
+                }
+              >
+                Categories
+              </NavLink>
+
+              <NavLink
+                to="/community"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.scrollTo(0, 0);
+                }}
+                className={({ isActive }) =>
+                  isActive ? activeClass : "text-gray-700"
+                }
+              >
+                Community
+              </NavLink>
+
+              <NavLink
+                to="/aboutus"
+                onClick={() => {
+                  setMenuOpen(false);
+                  window.scrollTo(0, 0);
+                }}
+                className={({ isActive }) =>
+                  isActive ? activeClass : "text-gray-700"
+                }
+              >
+                About
+              </NavLink>
+
             </div>
           </div>
         </div>

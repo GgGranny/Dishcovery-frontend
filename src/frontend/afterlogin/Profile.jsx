@@ -3,64 +3,48 @@ import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 
 const Profile = () => {
-  // Load username from Local Storage
   const username = localStorage.getItem("username") || "User";
-
-  // Load profile image from localStorage
-  const [profileImg, setProfileImg] = useState(
-    localStorage.getItem("profileImageDataUrl") || null
-  );
-
-  // Active Tab
+  const [profileImg, setProfileImg] = useState(localStorage.getItem("profileImageDataUrl") || null);
   const [activeTab, setActiveTab] = useState("my");
+  const [recipes, setRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+  const [likedRecipes, setLikedRecipes] = useState([]);
+  const [activity, setActivity] = useState([]);
 
-  // Counts for tabs
-  const [counts, setCounts] = useState({
-    my: 0,
-    saved: 0,
-    liked: 0,
-    activity: 0,
-  });
+  // Counts
+  const counts = {
+    my: recipes.length,
+    saved: savedRecipes.length,
+    liked: likedRecipes.length,
+    activity: activity.length,
+  };
 
-  // Initialize sample activity data in localStorage
+  // Fetch user's recipes from API
   useEffect(() => {
-    if (!localStorage.getItem("activity")) {
-      const sampleActivity = [
-        {
-          title: "Posted a new recipe",
-          subtitle: "Mediterranean Quinoa Bowl with Roasted Vegetables",
-          date: "1/15/2024",
-        },
-        {
-          title: "Liked a recipe",
-          subtitle: "Thai Green Curry with Jasmine Rice by Siriporn Thai",
-          date: "1/14/2024",
-        },
-        {
-          title: "Saved a recipe",
-          subtitle: "Homemade Margherita Pizza with Fresh Basil by Marco Rossi",
-          date: "1/12/2024",
-        },
-        {
-          title: "Commented on a recipe",
-          subtitle: "Chocolate Lava Cake with Vanilla Ice Cream by Emily Chen",
-          date: "1/12/2024",
-        },
-        {
-          title: "New follower",
-          subtitle: "Alex Thompson started following you",
-          date: "1/10/2024",
-        },
-      ];
-      localStorage.setItem("activity", JSON.stringify(sampleActivity));
-    }
+    const fetchRecipes = async () => {
+      try {
+        const token = localStorage.getItem("token"); // if your API needs auth
+        const res = await fetch("http://localhost:8080/api/recipes/recipe/r1/2", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch recipes");
 
-    setCounts({
-      my: JSON.parse(localStorage.getItem("myRecipes") || "[]").length,
-      saved: JSON.parse(localStorage.getItem("savedRecipes") || "[]").length,
-      liked: JSON.parse(localStorage.getItem("likedRecipes") || "[]").length,
-      activity: JSON.parse(localStorage.getItem("activity") || "[]").length,
-    });
+        const data = await res.json();
+        setRecipes(data); // assuming API returns array of recipes
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchRecipes();
+
+    // Load saved, liked, and activity from localStorage or API
+    setSavedRecipes(JSON.parse(localStorage.getItem("savedRecipes") || "[]"));
+    setLikedRecipes(JSON.parse(localStorage.getItem("likedRecipes") || "[]"));
+    setActivity(JSON.parse(localStorage.getItem("activity") || "[]"));
   }, []);
 
   // Upload Profile Image
@@ -83,21 +67,43 @@ const Profile = () => {
 
   // Render active tab content
   const renderTabContent = () => {
-    const dataMap = {
-      my: JSON.parse(localStorage.getItem("myRecipes") || "[]"),
-      saved: JSON.parse(localStorage.getItem("savedRecipes") || "[]"),
-      liked: JSON.parse(localStorage.getItem("likedRecipes") || "[]"),
-      activity: JSON.parse(localStorage.getItem("activity") || "[]"),
-    };
+    if (activeTab === "my") {
+      return recipes.length > 0 ? (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recipes.map((recipe) => (
+            <div key={recipe.id} className="bg-white p-4 border rounded-lg shadow hover:shadow-md">
+              <img
+                src={recipe.imageUrl} // adjust according to your API field
+                alt={recipe.title}
+                className="h-40 w-full object-cover rounded-lg mb-2"
+              />
+              <h3 className="font-semibold text-gray-800">{recipe.title}</h3>
+              <p className="text-gray-500 text-sm mt-1">{recipe.description}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-6 text-gray-500 italic">(You have not uploaded any recipes yet)</p>
+      );
+    }
+
+    if (activeTab === "saved") {
+      return savedRecipes.length > 0 ? (
+        <ul className="mt-6 text-gray-700">{savedRecipes.map((item, i) => <li key={i}>💾 {item}</li>)}</ul>
+      ) : <p className="mt-6 text-gray-500 italic">(No saved recipes)</p>;
+    }
+
+    if (activeTab === "liked") {
+      return likedRecipes.length > 0 ? (
+        <ul className="mt-6 text-gray-700">{likedRecipes.map((item, i) => <li key={i}>❤️ {item}</li>)}</ul>
+      ) : <p className="mt-6 text-gray-500 italic">(No liked recipes)</p>;
+    }
 
     if (activeTab === "activity") {
-      return dataMap.activity.length > 0 ? (
+      return activity.length > 0 ? (
         <div className="mt-6 flex flex-col gap-4">
-          {dataMap.activity.map((item, i) => (
-            <div
-              key={i}
-              className="bg-white shadow-md rounded-lg p-4 border border-gray-200 flex flex-col sm:flex-row sm:justify-between"
-            >
+          {activity.map((item, i) => (
+            <div key={i} className="bg-white shadow-md rounded-lg p-4 border flex flex-col sm:flex-row sm:justify-between">
               <div>
                 <p className="font-medium">{item.title}</p>
                 <p className="text-gray-600 text-sm mt-1">{item.subtitle}</p>
@@ -106,25 +112,8 @@ const Profile = () => {
             </div>
           ))}
         </div>
-      ) : (
-        <p className="mt-6 text-gray-500 italic">(No activity yet)</p>
-      );
+      ) : <p className="mt-6 text-gray-500 italic">(No activity yet)</p>;
     }
-
-    return dataMap[activeTab].length > 0 ? (
-      <ul className="mt-6 text-gray-700">
-        {dataMap[activeTab].map((item, i) => (
-          <li key={i}>
-            {activeTab === "my" && "🍽 "}
-            {activeTab === "saved" && "💾 "}
-            {activeTab === "liked" && "❤️ "}
-            {item}
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p className="mt-6 text-gray-500 italic">(No items yet)</p>
-    );
   };
 
   return (
@@ -138,9 +127,7 @@ const Profile = () => {
             <img
               src={profileImg || ""}
               alt="Profile"
-              className={`w-28 h-28 rounded-full border object-cover cursor-pointer transition hover:opacity-80 ${
-                !profileImg ? "bg-gray-200" : ""
-              }`}
+              className={`w-28 h-28 rounded-full border object-cover cursor-pointer transition hover:opacity-80 ${!profileImg ? "bg-gray-200" : ""}`}
               onClick={triggerFileSelect}
             />
             <input
@@ -162,33 +149,11 @@ const Profile = () => {
           <div className="flex-1">
             <p className="text-gray-500 text-sm">@{username}</p>
             <h1 className="text-2xl font-semibold">{username}</h1>
-
-            <p className="mt-3 leading-relaxed text-sm text-gray-700">
-              Passionate home cook and food blogger sharing Mediterranean-inspired
-              recipes. Love experimenting with fresh, seasonal ingredients!
-            </p>
-
-            <div className="flex items-center gap-6 mt-4 text-sm text-gray-600">
-              <p>📍 Kumaripati, Lalitpur</p>
-              <p>📅 Joined 6/15/2023</p>
-              <p className="text-green-600 underline cursor-pointer">
-                www.aryankitchen.com
-              </p>
-            </div>
-
             <div className="flex gap-10 mt-4 font-semibold">
-              <p>
-                <span className="text-lg">{counts.my}</span> Recipes
-              </p>
-              <p>
-                <span className="text-lg">892</span> Followers
-              </p>
-              <p>
-                <span className="text-lg">156</span> Following
-              </p>
-              <p>
-                <span className="text-lg">{counts.liked}</span> Likes
-              </p>
+              <p><span className="text-lg">{counts.my}</span> Recipes</p>
+              <p><span className="text-lg">892</span> Followers</p>
+              <p><span className="text-lg">156</span> Following</p>
+              <p><span className="text-lg">{counts.liked}</span> Likes</p>
             </div>
           </div>
 
@@ -203,11 +168,7 @@ const Profile = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 flex items-center gap-1 ${
-                activeTab === tab
-                  ? "border-b-2 border-green-500 text-green-600 font-medium"
-                  : "text-gray-500"
-              }`}
+              className={`pb-2 flex items-center gap-1 ${activeTab === tab ? "border-b-2 border-green-500 text-green-600 font-medium" : "text-gray-500"}`}
             >
               {tab === "my" && "My Recipes"}
               {tab === "saved" && "Saved Recipes"}
