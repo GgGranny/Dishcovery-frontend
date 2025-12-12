@@ -257,7 +257,7 @@ const AboutRecipes = () => {
                   {
                     recipe.steps.steps?.map((step, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                        <span className="shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
                           {idx + 1}
                         </span>
                         <p>{step}</p>

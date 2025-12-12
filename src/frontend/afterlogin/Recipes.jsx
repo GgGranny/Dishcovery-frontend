@@ -32,7 +32,7 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${6}`
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${9}`
         );
 
         const recipesArray = Array.isArray(res.data) ? res.data : [res.data];
