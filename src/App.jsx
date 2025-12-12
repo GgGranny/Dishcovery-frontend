@@ -8,12 +8,15 @@ import Homepage from "./frontend/afterlogin/Homepage";
 import Profile from "./frontend/afterlogin/Profile";
 import Recipes from "./frontend/afterlogin/Recipes";
 import UploadRecipes from "./frontend/afterlogin/UploadRecipes";
-import AboutUs from "./frontend/AboutUs";
+
 import Setting from "./frontend/afterlogin/Setting";
 import Comments from "./components/Comments";
 import Payments from "./components/Payment";
 import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 import Community from "./frontend/afterlogin/Community";
+import About from "./frontend/About";
+import AboutUs from "./frontend/afterlogin/AboutUs";
+import Communities from "./frontend/Communities";
 
 
 function App() {
@@ -28,6 +31,7 @@ function App() {
         <Route path="/payment" element={<Payments />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/aboutus" element={<AboutUs />} />
+        <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/uploadrecipes" element={<UploadRecipes />} />
@@ -35,6 +39,7 @@ function App() {
         <Route path="/setting" element={<Setting />} />
         <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/communities" element={<Communities />} />
       </Routes>
 
     </BrowserRouter>

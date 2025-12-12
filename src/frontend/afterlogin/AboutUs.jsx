@@ -1,8 +1,10 @@
 import React from "react";
-import Footer from "../components/Footer";
-import Homenavbar from "../components/Homenavbar";
-import aboutBg from "../assets/about-bg.png";
-import cuisineImg from "../assets/cuisine.png"
+
+import aboutBg from "../../assets/about-bg.png";
+import cuisineImg from "../../assets/cuisine.png"
+import Homenavbar from "../../components/Homenavbar";
+import Footer from "../../components/Footer";
+
 
 const AboutUs = () => {
   return (

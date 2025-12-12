@@ -49,6 +49,9 @@ const AboutRecipes = () => {
       return [];
     }
   };
+  useEffect(() => {
+  window.scrollTo(0, 0);
+    }, []);
 
   // Fetch recipe
   useEffect(() => {

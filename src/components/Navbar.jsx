@@ -19,8 +19,8 @@ const Navbar = () => {
         {/* Desktop Links */}
         <nav className="hidden md:flex items-center gap-8">
           <NavLink className="nav-link" to="/">Home</NavLink>
-          <NavLink className="nav-link" to="/community">Community</NavLink>
-          <NavLink className="nav-link" to="/aboutus">About</NavLink>
+          <NavLink className="nav-link" to="/communities">Community</NavLink>
+          <NavLink className="nav-link" to="/about">About</NavLink>
         </nav>
 
         {/* Desktop Login Button */}
@@ -47,8 +47,8 @@ const Navbar = () => {
           {/* Nav Links */}
           <div className="flex flex-col gap-3 text-lg">
             <NavLink className="mobile-link" to="/" onClick={() => setOpen(false)}>Home</NavLink>
-            <NavLink className="mobile-link" to="/community" onClick={() => setOpen(false)}>Community</NavLink>
-            <NavLink className="mobile-link" to="/aboutus" onClick={() => setOpen(false)}>About</NavLink>
+            <NavLink className="mobile-link" to="/communities" onClick={() => setOpen(false)}>Community</NavLink>
+            <NavLink className="mobile-link" to="/about" onClick={() => setOpen(false)}>About</NavLink>
           </div>
 
           {/* Mobile Login Button */}
