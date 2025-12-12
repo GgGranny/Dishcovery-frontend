@@ -20,6 +20,8 @@ const UploadRecipes = () => {
   });
   const [loading, setLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [stepsArray, setStepsArray] = useState([null]);
+
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -39,8 +41,13 @@ const UploadRecipes = () => {
   const addIngredient = () =>
     setFormData({ ...formData, ingredients: [...formData.ingredients, ""] });
 
-  const addStep = () =>
-    setFormData({ ...formData, steps: [...formData.steps, ""] });
+  const addStep = () => {
+    setFormData({
+      ...formData,
+      steps: [...formData.steps, ""]
+    });
+    console.log(formData.steps)
+  }
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
@@ -65,8 +72,8 @@ const UploadRecipes = () => {
     data.append("recipeDescription", formData.recipeDescription);
     data.append("category", formData.category);
     data.append("cookTime", formData.cookTime);
-    data.append("ingredients", JSON.stringify(formData.ingredients));
-    data.append("steps", JSON.stringify(formData.steps));
+    data.append("ingredients", formData.ingredients.filter(ingredient => ingredient.trim() !== "").join(","));
+    data.append("steps", formData.steps.filter(step => step.trim() !== "").join(","));
 
     if (formData.recipeThumbnail) {
       data.append("recipeThumbnail", formData.recipeThumbnail);
@@ -150,11 +157,10 @@ const UploadRecipes = () => {
           {[1, 2, 3, 4, 5].map((num) => (
             <div key={num} className="flex flex-col items-center w-full">
               <div
-                className={`w-11 h-11 flex items-center justify-center rounded-full text-lg font-bold transition-all duration-300 ${
-                  step === num
-                    ? "bg-green-600 text-white shadow-lg"
-                    : "bg-gray-300 text-gray-700"
-                }`}
+                className={`w-11 h-11 flex items-center justify-center rounded-full text-lg font-bold transition-all duration-300 ${step === num
+                  ? "bg-green-600 text-white shadow-lg"
+                  : "bg-gray-300 text-gray-700"
+                  }`}
               >
                 {num}
               </div>
@@ -272,21 +278,28 @@ const UploadRecipes = () => {
           {step === 3 && (
             <>
               <h2 className="text-2xl font-semibold mb-6">Instructions</h2>
+              {
+                formData.steps.map((stp, i) => (
+                  <div key={i} className="mb-4">
+                    <label className="block font-medium mb-1">Step {i + 1}</label>
 
-              {formData.steps.map((stp, i) => (
-                <div key={i} className="mb-4">
-                  <label className="block font-medium mb-1">Step {i + 1}</label>
-                  <input
-                    value={stp}
-                    onChange={(e) => {
-                      const arr = [...formData.steps];
-                      arr[i] = e.target.value;
-                      setFormData({ ...formData, steps: arr });
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border"
-                  />
-                </div>
-              ))}
+                    <input
+                      value={stp}
+                      onChange={(e) => {
+                        const updatedSteps = [...formData.steps];
+                        updatedSteps[i] = e.target.value;
+
+                        setFormData({
+                          ...formData,
+                          steps: updatedSteps
+                        });
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border"
+                    />
+                  </div>
+                ))
+              }
+
 
               <button onClick={addStep} className="text-green-700 mt-3">
                 + Add Step
@@ -428,9 +441,8 @@ const UploadRecipes = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className={`px-7 py-3 rounded-xl text-white ${
-                    loading ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
-                  }`}
+                  className={`px-7 py-3 rounded-xl text-white ${loading ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
+                    }`}
                 >
                   {loading ? "Uploading..." : "Publish Recipe ↑"}
                 </button>

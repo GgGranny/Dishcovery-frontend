@@ -3,23 +3,27 @@ import { GiEgyptianProfile } from "react-icons/gi";
 import Profile from "../assets/profile.jpg";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { request } from "../api/request";
 
 const Comments = () => {
     const [comments, setComments] = useState([]); // <-- FIX: start with empty array
-    const [videoId, setVideoId] = useState('cf69162d-35bf-4021-bf88-e04e6094bca8');
+    const [videoId, setVideoId] = useState('9ccedd35-9561-4698-ab09-b2917df1c445');
     const [videoData, setVideoData] = useState(null);
     useEffect(() => {
-        axios.get(`http://localhost:8080/api/v1/videos/stream/segment/${videoId}/master.m3u8`, {
-            headers: {
-                "Authorization": "Bearer " + localStorage.getItem("token")
-            }
+        // axios.get(`http://localhost:8080/`, {
+        //     headers: {
+        //         "Authorization": "Bearer " + localStorage.getItem("token")
+        //     }
+        // })
+        request("get", `api/v1/videos/stream/segment/${videoId}/master.m3u8`, null, {
+            "Authorization": "Bearer " + localStorage.getItem("token")
         })
             .then(res => {
                 setVideoData(res.config.url)
                 console.log(res)
             })
             .catch(error => console.error(error))
-        axios.get("http://localhost:8080/api/comments/c1/get-comments/2", {
+        axios.get("http://localhost:8080/api/comments/c1/comment/1", {
             headers: {
                 "Authorization": "Bearer " + localStorage.getItem("token")
             }
