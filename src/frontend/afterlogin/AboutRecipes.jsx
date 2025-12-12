@@ -50,8 +50,8 @@ const AboutRecipes = () => {
     }
   };
   useEffect(() => {
-  window.scrollTo(0, 0);
-    }, []);
+    window.scrollTo(0, 0);
+  }, []);
 
   // Fetch recipe
   useEffect(() => {
@@ -74,9 +74,7 @@ const AboutRecipes = () => {
         if (data.video?.videoId) {
           try {
             const videoResponse = await axios.get(
-              `http://localhost:8080/api/v1/videos/stream/segment/${data.video.videoId}/master.m3u8`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
+              `http://localhost:8080/api/v1/videos/stream/segment/${data.video.videoId}/master.m3u8`);
             videoStreamUrl = videoResponse.config.url;
           } catch (videoErr) {
             console.error("Video stream error:", videoErr);
@@ -100,7 +98,7 @@ const AboutRecipes = () => {
   useEffect(() => {
     const fetchComments = async () => {
       if (!token || !id) return;
-      
+
       try {
         const res = await axios.get(
           `http://localhost:8080/api/comments/c1/comment/${id}`,
@@ -108,7 +106,7 @@ const AboutRecipes = () => {
         );
 
         let commentsArray = [];
-        
+
         if (Array.isArray(res.data)) {
           commentsArray = res.data;
         } else if (res.data && Array.isArray(res.data.comments)) {
@@ -151,7 +149,7 @@ const AboutRecipes = () => {
         content: comment.trim(),
         username: username,
       };
-      
+
       const response = await axios.post(
         `http://localhost:8080/api/comments/c1/comment`,
         requestBody,
@@ -173,7 +171,7 @@ const AboutRecipes = () => {
         );
 
         let commentsArray = [];
-        
+
         if (Array.isArray(res.data)) {
           commentsArray = res.data;
         } else if (res.data && Array.isArray(res.data.comments)) {
@@ -187,14 +185,14 @@ const AboutRecipes = () => {
         );
 
         setCommentsList(sortedComments);
-        
+
       } catch (fetchErr) {
         console.error("Failed to refresh comments:", fetchErr);
       }
-      
+
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
-      
+
       // Try alternative method with query parameters if first fails
       try {
         await axios.post(
@@ -214,7 +212,7 @@ const AboutRecipes = () => {
         );
 
         setComment("");
-        
+
         // Refresh comments
         const res = await axios.get(
           `http://localhost:8080/api/comments/c1/comment/${id}`,
@@ -224,11 +222,11 @@ const AboutRecipes = () => {
         let commentsArray = [];
         if (Array.isArray(res.data)) commentsArray = res.data;
         else if (res.data?.comments) commentsArray = res.data.comments;
-        
-        setCommentsList(commentsArray.sort((a, b) => 
+
+        setCommentsList(commentsArray.sort((a, b) =>
           a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
         ));
-        
+
       } catch (secondErr) {
         console.error("Second attempt also failed:", secondErr);
         alert(`Failed to post comment. Please try again. Error: ${secondErr.message}`);
@@ -354,11 +352,10 @@ const AboutRecipes = () => {
               {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
                 <button
                   key={tab}
-                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${
-                    activeTab === tab
-                      ? "text-green-600 font-semibold"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${activeTab === tab
+                    ? "text-green-600 font-semibold"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab}
@@ -387,18 +384,19 @@ const AboutRecipes = () => {
             )}
 
             {activeTab === "instructions" && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <h2 className="font-semibold mb-4 text-lg">Instructions</h2>
-                <ol className="space-y-4">
-                  {recipe.steps?.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-4">
-                      <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white text-sm font-semibold rounded-full flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <p className="text-gray-700 pt-1">{step}</p>
-                    </li>
-                  ))}
-                </ol>
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <h2 className="font-semibold mb-2">Instructions</h2>
+                <ul className="space-y-4">
+                  {
+                    recipe.steps.steps?.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <p>{step}</p>
+                      </li>
+                    ))}
+                </ul>
               </div>
             )}
 
@@ -454,11 +452,10 @@ const AboutRecipes = () => {
                   <button
                     onClick={postComment}
                     disabled={!comment.trim() || postingComment}
-                    className={`px-5 py-2 rounded-lg font-medium ${
-                      !comment.trim() || postingComment
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }`}
+                    className={`px-5 py-2 rounded-lg font-medium ${!comment.trim() || postingComment
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700 text-white"
+                      }`}
                   >
                     {postingComment ? "Posting..." : "Post Comment"}
                   </button>
@@ -473,7 +470,7 @@ const AboutRecipes = () => {
                   </div>
                 ) : (
                   commentsList.map((commentItem, index) => (
-                    <div 
+                    <div
                       key={commentItem.id || commentItem.commentId || index}
                       className="border-b border-gray-100 pb-6 last:border-0 last:pb-0"
                     >

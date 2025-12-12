@@ -14,6 +14,8 @@ import Comments from "./components/Comments";
 import Payments from "./components/Payment";
 import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 import Community from "./frontend/afterlogin/Community";
+import PaymentSuccess from "./components/PaymentSuccess";
+import PaymentFail from "./components/PaymentFail";
 import About from "./frontend/About";
 import AboutUs from "./frontend/afterlogin/AboutUs";
 import Communities from "./frontend/Communities";
@@ -39,6 +41,8 @@ function App() {
         <Route path="/setting" element={<Setting />} />
         <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/fail" element={<PaymentFail />} />
         <Route path="/communities" element={<Communities />} />
       </Routes>
 
