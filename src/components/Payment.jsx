@@ -1,83 +1,74 @@
-import React, { useEffect, useState } from "react";
-import CryptoJS from "crypto-js";
+import { useState } from "react";
+import { esewaPayment } from "../api/Payment";
 
-const Payments = () => {
-    const SECRET = "YOUR_SECRET_KEY"; // replace with actual eSewa secret key
-
+const Payment = () => {
     const [formData, setFormData] = useState({
-        amount: "100",
-        tax_amount: "10",
-        total_amount: "110",
-        transaction_uuid: "",
+        amount: 0,
+        tax_amount: 0,
+        transaction_uuid: Math.round(Math.random() * 99999).toString(),
         product_code: "EPAYTEST",
-        product_service_charge: "0",
-        product_delivery_charge: "0",
-        success_url: "https://developer.esewa.com.np/success",
-        failure_url: "https://developer.esewa.com.np/failure",
-        signed_field_names: "total_amount,transaction_uuid,product_code",
-        signature: ""
-    });
+    })
 
-    // Generate UUID + Signature when amount/product_code changes
-    useEffect(() => {
-        generateUuid();
-    }, []);
+    const handleOnChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        })
+    }
 
-    useEffect(() => {
-        generateSignature();
-    }, [formData.total_amount, formData.transaction_uuid, formData.product_code]);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            let total_amount = Number(formData.amount) + Number(formData.tax_amount);
+            const data = {
+                "total_amount": total_amount,
+                "transaction_uuid": formData.transaction_uuid,
+                "product_code": formData.product_code
+            }
+            const response = await esewaPayment(data);
+            const { signature, signed_field_name } = response.data;
+            const paymentData = {
+                ...formData,
+                total_amount: total_amount,
+                product_service_charge: 0,
+                product_delivery_charge: 0,
+                success_url: "http://localhost:5173/payment/success",
+                failure_url: "http://localhost:5173/payment/fail",
+                signed_field_names: signed_field_name,
+                signature: signature
+            }
 
-    /** Generate transaction UUID */
-    const generateUuid = () => {
-        const now = new Date();
-        const uuid =
-            now.toISOString().slice(2, 10).replace(/-/g, "") +
-            "-" +
-            now.getHours() +
-            now.getMinutes() +
-            now.getSeconds();
+            const form = document.createElement("form");
+            form.setAttribute("method", "POST");
+            form.setAttribute("action", "https://rc-epay.esewa.com.np/api/epay/main/v2/form");
 
-        setFormData((prev) => ({ ...prev, transaction_uuid: uuid }));
-    };
-
-    /** Generate HMAC Signature */
-    const generateSignature = () => {
-        if (!formData.transaction_uuid) return;
-
-        const rawString = `total_amount=${formData.total_amount},transaction_uuid=${formData.transaction_uuid},product_code=${formData.product_code}`;
-
-        const hash = CryptoJS.HmacSHA256(rawString, SECRET);
-        const signatureBase64 = CryptoJS.enc.Base64.stringify(hash);
-
-        setFormData((prev) => ({ ...prev, signature: signatureBase64 }));
-    };
+            Object.entries(paymentData).forEach(([key, value]) => {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.name = key;
+                input.value = value;
+                input.required = true
+                form.appendChild(input);
+            });
+            console.log(formData);
+            console.log(form);
+            console.log(response);
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error("faild to pay", error);
+        }
+    }
 
     return (
-        <form
-            action="https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-            method="POST"
-            className="flex flex-col gap-3 border p-4"
-        >
-            <input name="amount" value={formData.amount} readOnly />
-            <input name="tax_amount" value={formData.tax_amount} readOnly />
-            <input name="total_amount" value={formData.total_amount} readOnly />
-            <input name="transaction_uuid" value={formData.transaction_uuid} readOnly />
-            <input name="product_code" value={formData.product_code} readOnly />
-            <input name="product_service_charge" value={formData.product_service_charge} readOnly />
-            <input name="product_delivery_charge" value={formData.product_delivery_charge} readOnly />
-            <input name="success_url" value={formData.success_url} readOnly />
-            <input name="failure_url" value={formData.failure_url} readOnly />
-            <input name="signed_field_names" value={formData.signed_field_names} readOnly />
-            <input name="signature" value={formData.signature} readOnly />
+        <div className="border border-red-500 h-screen flex justify-center items-center">
+            <form className="flex flex-col w-[50%]">
+                <input className="bg-gray-300 outline-1 rounded mt-2" type="text" id="amount" name="amount" value={formData.amount} onChange={handleOnChange} required />
+                <input className="bg-green-500 text-white outline-1 rounded mt-2" value="Submit" type="submit" onClick={handleSubmit} />
+            </form>
+        </div>
+    )
+}
 
-            <button
-                type="submit"
-                className="bg-green-600 text-white px-4 py-2 rounded"
-            >
-                Pay with eSewa
-            </button>
-        </form>
-    );
-};
-
-export default Payments;
+export default Payment;

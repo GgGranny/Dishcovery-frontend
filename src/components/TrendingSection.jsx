@@ -56,7 +56,6 @@ const TrendingSection = () => {
 
   const [index, setIndex] = useState(0);
   const visibleCards = 3;
-
   const maxIndex = Math.max(0, cards.length - visibleCards);
 
   return (
@@ -76,7 +75,7 @@ const TrendingSection = () => {
           ‹
         </button>
 
-        {/* Carousel Viewport */}
+        {/* Carousel */}
         <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-500"
@@ -88,16 +87,26 @@ const TrendingSection = () => {
                 className="flex-none w-full md:w-1/2 lg:w-1/3 px-4"
               >
                 <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition hover:-translate-y-1">
-                  <img src={card.image} alt={card.title} className="w-full h-48 object-cover" />
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className="w-full h-48 object-cover"
+                  />
 
                   <div className="p-5 text-left">
                     <h3 className="text-lg font-semibold">{card.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{card.desc}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {card.desc}
+                    </p>
 
-                    <div className="flex justify-between text-xs text-gray-700 mt-3">
-                      <span>⏱ {card.time}</span>
-                      <span>⭐ {card.rating}</span>
-                      <span>👨‍🍳 {card.author}</span>
+                    {/* Time + Author (left) | Rating (right) */}
+                    <div className="flex justify-between items-start text-xs text-gray-700 mt-3">
+                      <div className="flex flex-col gap-1">
+                        <span>⏱ {card.time}</span>
+                        <span>👨‍🍳 {card.author}</span>
+                      </div>
+
+                      <span className="font-semibold">⭐ {card.rating}</span>
                     </div>
                   </div>
                 </div>
