@@ -4,7 +4,7 @@ import axios from "axios";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import authorImg from "../../assets/profile.jpg";
-import { FaStar, FaRegStar } from "react-icons/fa";
+import { FaStar, FaRegStar, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
 import VideoPlayer from "../../components/VideoPlayer";
@@ -21,6 +21,7 @@ const AboutRecipes = () => {
   const [comment, setComment] = useState("");
   const [commentsList, setCommentsList] = useState([]);
   const [postingComment, setPostingComment] = useState(false);
+  const [commentLikes, setCommentLikes] = useState({});
 
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
@@ -49,9 +50,6 @@ const AboutRecipes = () => {
       return [];
     }
   };
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
   // Fetch recipe
   useEffect(() => {
@@ -74,7 +72,9 @@ const AboutRecipes = () => {
         if (data.video?.videoId) {
           try {
             const videoResponse = await axios.get(
-              `http://localhost:8080/api/v1/videos/stream/segment/${data.video.videoId}/master.m3u8`);
+              `http://localhost:8080/api/v1/videos/stream/segment/${data.video.videoId}/master.m3u8`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
             videoStreamUrl = videoResponse.config.url;
           } catch (videoErr) {
             console.error("Video stream error:", videoErr);
@@ -95,46 +95,127 @@ const AboutRecipes = () => {
   }, [id, token]);
 
   // Fetch comments for THIS recipe
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!token || !id) return;
+  const fetchComments = async () => {
+    if (!token || !id) return;
+    
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/api/comments/c1/comment/${id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      try {
-        const res = await axios.get(
-          `http://localhost:8080/api/comments/c1/comment/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        let commentsArray = [];
-
-        if (Array.isArray(res.data)) {
-          commentsArray = res.data;
-        } else if (res.data && Array.isArray(res.data.comments)) {
-          commentsArray = res.data.comments;
-        } else if (res.data && res.data.comment) {
-          commentsArray = [res.data.comment];
-        } else if (res.data && typeof res.data === 'object') {
-          const possibleArrays = Object.values(res.data).find(val => Array.isArray(val));
-          if (possibleArrays) {
-            commentsArray = possibleArrays;
-          }
+      let commentsArray = [];
+      
+      if (Array.isArray(res.data)) {
+        commentsArray = res.data;
+      } else if (res.data && Array.isArray(res.data.comments)) {
+        commentsArray = res.data.comments;
+      } else if (res.data && res.data.comment) {
+        commentsArray = [res.data.comment];
+      } else if (res.data && typeof res.data === 'object') {
+        const possibleArrays = Object.values(res.data).find(val => Array.isArray(val));
+        if (possibleArrays) {
+          commentsArray = possibleArrays;
         }
-
-        const sortedComments = commentsArray.sort((a, b) =>
-          a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
-        );
-
-        setCommentsList(sortedComments);
-      } catch (err) {
-        console.error("Failed to fetch comments:", err);
-        setCommentsList([]);
       }
-    };
 
-    if (id) {
+      const sortedComments = commentsArray.sort((a, b) =>
+        a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
+      );
+
+      setCommentsList(sortedComments);
+      
+      // Initialize likes for each comment
+      const likesState = {};
+      sortedComments.forEach(comment => {
+        const commentId = comment.id || comment.commentId;
+        if (commentId) {
+          likesState[commentId] = {
+            likes: comment.likesCount || 0,
+            dislikes: comment.dislikesCount || 0,
+            userReaction: comment.userReaction || null
+          };
+        }
+      });
+      setCommentLikes(likesState);
+      
+    } catch (err) {
+      console.error("Failed to fetch comments:", err);
+      setCommentsList([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchComments();
+  }, [id, token]);
+
+  // Handle comment like/dislike
+  const handleCommentReaction = async (commentId, type) => {
+    if (!token) {
+      alert("Please login to react to comments");
+      navigate("/login");
+      return;
+    }
+
+    const currentState = commentLikes[commentId] || { likes: 0, dislikes: 0, userReaction: null };
+    
+    // Optimistic update
+    let newLikes = currentState.likes;
+    let newDislikes = currentState.dislikes;
+    let newUserReaction = type;
+
+    if (currentState.userReaction === type) {
+      // Remove reaction
+      if (type === "LIKE") {
+        newLikes = Math.max(0, newLikes - 1);
+      } else {
+        newDislikes = Math.max(0, newDislikes - 1);
+      }
+      newUserReaction = null;
+    } else {
+      // Add or change reaction
+      if (type === "LIKE") {
+        newLikes++;
+        if (currentState.userReaction === "DISLIKE") {
+          newDislikes = Math.max(0, newDislikes - 1);
+        }
+      } else {
+        newDislikes++;
+        if (currentState.userReaction === "LIKE") {
+          newLikes = Math.max(0, newLikes - 1);
+        }
+      }
+    }
+
+    // Update local state
+    setCommentLikes({
+      ...commentLikes,
+      [commentId]: {
+        likes: newLikes,
+        dislikes: newDislikes,
+        userReaction: newUserReaction
+      }
+    });
+
+    try {
+      await axios.post(
+        "http://localhost:8080/api/comments/c1/comment/like",
+        { commentId, type },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      // Refresh comments to get updated counts
+      fetchComments();
+    } catch (err) {
+      console.error("Like/Dislike failed:", err);
+      // Revert on error
       fetchComments();
     }
-  }, [id, token]);
+  };
 
   // Post comment for THIS recipe
   const postComment = async () => {
@@ -149,7 +230,7 @@ const AboutRecipes = () => {
         content: comment.trim(),
         username: username,
       };
-
+      
       const response = await axios.post(
         `http://localhost:8080/api/comments/c1/comment`,
         requestBody,
@@ -162,37 +243,11 @@ const AboutRecipes = () => {
       );
 
       setComment("");
-
-      // Refresh comments immediately after posting
-      try {
-        const res = await axios.get(
-          `http://localhost:8080/api/comments/c1/comment/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        let commentsArray = [];
-
-        if (Array.isArray(res.data)) {
-          commentsArray = res.data;
-        } else if (res.data && Array.isArray(res.data.comments)) {
-          commentsArray = res.data.comments;
-        } else if (res.data && res.data.comment) {
-          commentsArray = [res.data.comment];
-        }
-
-        const sortedComments = commentsArray.sort((a, b) =>
-          a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
-        );
-
-        setCommentsList(sortedComments);
-
-      } catch (fetchErr) {
-        console.error("Failed to refresh comments:", fetchErr);
-      }
-
+      fetchComments();
+      
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
-
+      
       // Try alternative method with query parameters if first fails
       try {
         await axios.post(
@@ -212,21 +267,8 @@ const AboutRecipes = () => {
         );
 
         setComment("");
-
-        // Refresh comments
-        const res = await axios.get(
-          `http://localhost:8080/api/comments/c1/comment/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        let commentsArray = [];
-        if (Array.isArray(res.data)) commentsArray = res.data;
-        else if (res.data?.comments) commentsArray = res.data.comments;
-
-        setCommentsList(commentsArray.sort((a, b) =>
-          a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
-        ));
-
+        fetchComments();
+        
       } catch (secondErr) {
         console.error("Second attempt also failed:", secondErr);
         alert(`Failed to post comment. Please try again. Error: ${secondErr.message}`);
@@ -352,10 +394,11 @@ const AboutRecipes = () => {
               {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
                 <button
                   key={tab}
-                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${activeTab === tab
-                    ? "text-green-600 font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
-                    }`}
+                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${
+                    activeTab === tab
+                      ? "text-green-600 font-semibold"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab}
@@ -384,19 +427,18 @@ const AboutRecipes = () => {
             )}
 
             {activeTab === "instructions" && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-                <h2 className="font-semibold mb-2">Instructions</h2>
-                <ul className="space-y-4">
-                  {
-                    recipe.steps.steps?.map((step, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="shrink-0 w-6 h-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <p>{step}</p>
-                      </li>
-                    ))}
-                </ul>
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <h2 className="font-semibold mb-4 text-lg">Instructions</h2>
+                <ol className="space-y-4">
+                  {recipe.steps?.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-4">
+                      <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white text-sm font-semibold rounded-full flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <p className="text-gray-700 pt-1">{step}</p>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 
@@ -452,10 +494,11 @@ const AboutRecipes = () => {
                   <button
                     onClick={postComment}
                     disabled={!comment.trim() || postingComment}
-                    className={`px-5 py-2 rounded-lg font-medium ${!comment.trim() || postingComment
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700 text-white"
-                      }`}
+                    className={`px-5 py-2 rounded-lg font-medium ${
+                      !comment.trim() || postingComment
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }`}
                   >
                     {postingComment ? "Posting..." : "Post Comment"}
                   </button>
@@ -469,33 +512,65 @@ const AboutRecipes = () => {
                     <p className="text-gray-500">No comments yet. Be the first to share your thoughts!</p>
                   </div>
                 ) : (
-                  commentsList.map((commentItem, index) => (
-                    <div
-                      key={commentItem.id || commentItem.commentId || index}
-                      className="border-b border-gray-100 pb-6 last:border-0 last:pb-0"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                            <span className="font-semibold text-green-700 text-sm">
-                              {(commentItem.username || username).charAt(0).toUpperCase()}
-                            </span>
+                  commentsList.map((commentItem, index) => {
+                    const commentId = commentItem.id || commentItem.commentId || index;
+                    const likesData = commentLikes[commentId] || { likes: 0, dislikes: 0, userReaction: null };
+                    
+                    return (
+                      <div 
+                        key={commentId}
+                        className="border-b border-gray-100 pb-6 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                              <span className="font-semibold text-green-700 text-sm">
+                                {(commentItem.username || username).charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm">
+                                {commentItem.username || username}
+                              </h4>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-semibold text-sm">
-                              {commentItem.username || username}
-                            </h4>
-                          </div>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(commentItem.createdAt)}
+                          </span>
                         </div>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(commentItem.createdAt)}
-                        </span>
+                        <p className="text-gray-700 pl-11 mb-3">
+                          {commentItem.content || commentItem.comment || "No comment text"}
+                        </p>
+                        
+                        {/* Like/Dislike Buttons */}
+                        <div className="flex items-center gap-4 pl-11">
+                          <button
+                            onClick={() => handleCommentReaction(commentId, "LIKE")}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${
+                              likesData.userReaction === "LIKE" 
+                                ? "bg-green-50 text-green-600" 
+                                : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <FaThumbsUp className={likesData.userReaction === "LIKE" ? "text-green-600" : "text-gray-500"} />
+                            <span className="font-medium">{likesData.likes}</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => handleCommentReaction(commentId, "DISLIKE")}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${
+                              likesData.userReaction === "DISLIKE" 
+                                ? "bg-red-50 text-red-600" 
+                                : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <FaThumbsDown className={likesData.userReaction === "DISLIKE" ? "text-red-600" : "text-gray-500"} />
+                            <span className="font-medium">{likesData.dislikes}</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-gray-700 pl-11">
-                        {commentItem.content || commentItem.comment || "No comment text"}
-                      </p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -517,6 +592,31 @@ const AboutRecipes = () => {
             <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition">
               View Profile
             </button>
+          </div>
+
+          {/* Comment Stats */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h2 className="font-bold text-lg mb-4">Comment Activity</h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Total Comments</span>
+                <span className="font-bold text-green-600">{commentsList.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Total Reactions</span>
+                <span className="font-bold text-green-600">
+                  {Object.values(commentLikes).reduce((sum, data) => sum + data.likes + data.dislikes, 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Most Liked Comment</span>
+                <span className="font-bold text-green-600">
+                  {commentsList.length > 0 
+                    ? Math.max(...commentsList.map(c => commentLikes[c.id || c.commentId]?.likes || 0))
+                    : 0}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Similar Recipes */}
