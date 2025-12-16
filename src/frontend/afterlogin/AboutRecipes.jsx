@@ -18,6 +18,8 @@ const AboutRecipes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoDescription, setVideoDescription] = useState("");
   const [comment, setComment] = useState("");
   const [commentsList, setCommentsList] = useState([]);
   const [postingComment, setPostingComment] = useState(false);
@@ -61,14 +63,18 @@ const AboutRecipes = () => {
       }
 
       try {
+        // Fetch recipe
         const response = await axios.get(
           `http://localhost:8080/api/recipes/recipe/r1/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = response.data;
+        console.log("Recipe data:", data);
         const cleanSteps = parseSteps(data.steps);
 
+        // Check if recipe has video
         let videoStreamUrl = "";
+        
         if (data.video?.videoId) {
           try {
             const videoResponse = await axios.get(
@@ -76,13 +82,24 @@ const AboutRecipes = () => {
               { headers: { Authorization: `Bearer ${token}` } }
             );
             videoStreamUrl = videoResponse.config.url;
+            console.log("Video stream URL:", videoStreamUrl);
           } catch (videoErr) {
             console.error("Video stream error:", videoErr);
           }
         }
 
+        // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
         setVideoUrl(videoStreamUrl);
+        
+        // Set video title and description from the video object in recipe response
+        if (data.video) {
+          setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
+          setVideoDescription(data.video.description || "Video tutorial for this recipe");
+          console.log("Video title from recipe:", data.video.title);
+          console.log("Video description from recipe:", data.video.description);
+        }
+
       } catch (err) {
         console.error("Recipe fetch error:", err);
         setError("Failed to load recipe.");
@@ -446,7 +463,44 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
                 {recipe.video ? (
-                  <VideoPlayer src={videoUrl} />
+                  <>
+                    <VideoPlayer src={videoUrl} />
+                    
+                    {/* Video Title and Description */}
+                    <div className="mt-6 space-y-4">
+                      {videoTitle && (
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-800 mb-1">{videoTitle}</h3>
+                          <div className="h-1 w-16 bg-green-500 rounded-full"></div>
+                        </div>
+                      )}
+                      
+                      {videoDescription && (
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                          <h4 className="font-medium text-gray-700 mb-2">About this video:</h4>
+                          <p className="text-gray-600">{videoDescription}</p>
+                        </div>
+                      )}
+                      
+                      {/* Video Metadata */}
+                      {recipe.video && (
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-4">
+                          {recipe.video.uploadedAt && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Uploaded:</span>
+                              <span>{new Date(recipe.video.uploadedAt).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          {recipe.video.contentType && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Format:</span>
+                              <span className="px-2 py-1 bg-gray-100 rounded">{recipe.video.contentType.split('/')[1]}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <p className="text-gray-600 text-center py-8">No video available for this recipe.</p>
                 )}
@@ -593,6 +647,33 @@ const AboutRecipes = () => {
               View Profile
             </button>
           </div>
+
+          {/* Video Info Card */}
+          {recipe.video && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <h2 className="font-bold text-lg mb-4">Video Information</h2>
+              <div className="space-y-3">
+                {videoTitle && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Video Title</h3>
+                    <p className="font-semibold text-gray-800">{videoTitle}</p>
+                  </div>
+                )}
+                {videoDescription && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Video Description</h3>
+                    <p className="text-sm text-gray-600">{videoDescription}</p>
+                  </div>
+                )}
+                {recipe.video.uploadedAt && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Upload Date</h3>
+                    <p className="text-sm text-gray-600">{new Date(recipe.video.uploadedAt).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Comment Stats */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
