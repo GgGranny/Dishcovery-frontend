@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 
 const Profile = () => {
-  // Load username from Local Storage
   const username = localStorage.getItem("username") || "User";
+  const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userid");
+  const navigate = useNavigate();
 
-  // Load profile image from localStorage
   const [profileImg, setProfileImg] = useState(
     localStorage.getItem("profileImageDataUrl") || null
   );
 
-  // Active Tab
   const [activeTab, setActiveTab] = useState("my");
 
-  // Counts for tabs
   const [counts, setCounts] = useState({
     my: 0,
     saved: 0,
@@ -22,46 +22,12 @@ const Profile = () => {
     activity: 0,
   });
 
-  // Initialize sample activity data in localStorage
-  useEffect(() => {
-    if (!localStorage.getItem("activity")) {
-      const sampleActivity = [
-        {
-          title: "Posted a new recipe",
-          subtitle: "Mediterranean Quinoa Bowl with Roasted Vegetables",
-          date: "1/15/2024",
-        },
-        {
-          title: "Liked a recipe",
-          subtitle: "Thai Green Curry with Jasmine Rice by Siriporn Thai",
-          date: "1/14/2024",
-        },
-        {
-          title: "Saved a recipe",
-          subtitle: "Homemade Margherita Pizza with Fresh Basil by Marco Rossi",
-          date: "1/12/2024",
-        },
-        {
-          title: "Commented on a recipe",
-          subtitle: "Chocolate Lava Cake with Vanilla Ice Cream by Emily Chen",
-          date: "1/12/2024",
-        },
-        {
-          title: "New follower",
-          subtitle: "Alex Thompson started following you",
-          date: "1/10/2024",
-        },
-      ];
-      localStorage.setItem("activity", JSON.stringify(sampleActivity));
-    }
+  const [myRecipes, setMyRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+  const [likedRecipes, setLikedRecipes] = useState([]);
+  const [activity, setActivity] = useState([]);
 
-    setCounts({
-      my: JSON.parse(localStorage.getItem("myRecipes") || "[]").length,
-      saved: JSON.parse(localStorage.getItem("savedRecipes") || "[]").length,
-      liked: JSON.parse(localStorage.getItem("likedRecipes") || "[]").length,
-      activity: JSON.parse(localStorage.getItem("activity") || "[]").length,
-    });
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   // Upload Profile Image
   const handleImageChange = (e) => {
@@ -81,19 +47,118 @@ const Profile = () => {
     document.getElementById("profileUpload").click();
   };
 
-  // Render active tab content
-  const renderTabContent = () => {
-    const dataMap = {
-      my: JSON.parse(localStorage.getItem("myRecipes") || "[]"),
-      saved: JSON.parse(localStorage.getItem("savedRecipes") || "[]"),
-      liked: JSON.parse(localStorage.getItem("likedRecipes") || "[]"),
-      activity: JSON.parse(localStorage.getItem("activity") || "[]"),
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!token || !userId) return;
+
+      setLoading(true);
+
+      try {
+        // Fetch My Recipes
+        const res = await fetch(
+          `http://localhost:8080/api/recipes/user/r1/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await res.json();
+        const myData = Array.isArray(data) ? data : [data];
+        setMyRecipes(myData);
+
+        // For demo, using localStorage for saved/liked recipes and activity
+        const savedData = JSON.parse(localStorage.getItem("savedRecipes") || "[]");
+        const likedData = JSON.parse(localStorage.getItem("likedRecipes") || "[]");
+        let activityData = JSON.parse(localStorage.getItem("activity") || "[]");
+
+        setSavedRecipes(savedData);
+        setLikedRecipes(likedData);
+        setActivity(activityData);
+
+        setCounts({
+          my: myData.length,
+          saved: savedData.length,
+          liked: likedData.length,
+          activity: activityData.length,
+        });
+      } catch (err) {
+        console.error("Error fetching user recipes:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
+    fetchUserData();
+  }, [token, userId]);
+
+  const renderStars = (rating = 4) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+    return (
+      <div className="flex items-center gap-0.5">
+        {[...Array(fullStars)].map((_, i) => (
+          <span key={`full-${i}`} className="text-yellow-400">★</span>
+        ))}
+        {hasHalfStar && <span className="text-yellow-400">★</span>}
+        {[...Array(emptyStars)].map((_, i) => (
+          <span key={`empty-${i}`} className="text-gray-300">★</span>
+        ))}
+      </div>
+    );
+  };
+
+  const renderCard = (recipe) => (
+    <div
+      key={recipe.recipeId || recipe.id || Math.random()}
+      className="bg-white rounded-lg overflow-hidden border border-gray-300 hover:shadow-lg cursor-pointer transition"
+      onClick={() => navigate(`/aboutrecipes/${recipe.recipeId || recipe.id}`)}
+    >
+      <div className="h-40 w-full overflow-hidden">
+        <img
+          src={
+            recipe.thumbnail
+              ? `data:image/jpeg;base64,${recipe.thumbnail}`
+              : "https://via.placeholder.com/300x200?text=No+Image"
+          }
+          alt={recipe.recipeName || "Recipe"}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.src = "https://via.placeholder.com/300x200?text=No+Image";
+          }}
+        />
+      </div>
+      <div className="p-3">
+        <div className="flex justify-between items-center mb-1">
+          <h3 className="text-sm font-medium text-gray-800 line-clamp-1">
+            {recipe.recipeName || "Unnamed Recipe"}
+          </h3>
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            {renderStars(recipe.rating || 4)}
+            <span>{recipe.rating || 4}</span>
+          </div>
+        </div>
+        <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+          {recipe.description || "No description available."}
+        </p>
+        <div className="flex justify-between items-center text-[10px] text-gray-500">
+          <span>{recipe.difficulty || "Easy"}</span>
+          <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[9px] rounded">
+            {recipe.category || "Recipe"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTabContent = () => {
+    if (loading) return <p className="mt-6 text-gray-500">Loading...</p>;
+
     if (activeTab === "activity") {
-      return dataMap.activity.length > 0 ? (
-        <div className="mt-6 flex flex-col gap-4">
-          {dataMap.activity.map((item, i) => (
+      return activity.length > 0 ? (
+        <div className="flex flex-col gap-4">
+          {activity.map((item, i) => (
             <div
               key={i}
               className="bg-white shadow-md rounded-lg p-4 border border-gray-200 flex flex-col sm:flex-row sm:justify-between"
@@ -107,21 +172,20 @@ const Profile = () => {
           ))}
         </div>
       ) : (
-        <p className="mt-6 text-gray-500 italic">(No activity yet)</p>
+        <p className="text-gray-500 italic">(No activity yet)</p>
       );
     }
 
-    return dataMap[activeTab].length > 0 ? (
-      <ul className="mt-6 text-gray-700">
-        {dataMap[activeTab].map((item, i) => (
-          <li key={i}>
-            {activeTab === "my" && "🍽 "}
-            {activeTab === "saved" && "💾 "}
-            {activeTab === "liked" && "❤️ "}
-            {item}
-          </li>
-        ))}
-      </ul>
+    const dataMap = {
+      my: myRecipes,
+      saved: savedRecipes,
+      liked: likedRecipes,
+    };
+
+    return dataMap[activeTab] && dataMap[activeTab].length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+        {dataMap[activeTab].map((item) => renderCard(item))}
+      </div>
     ) : (
       <p className="mt-6 text-gray-500 italic">(No items yet)</p>
     );
@@ -131,10 +195,8 @@ const Profile = () => {
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       <Homenavbar />
 
-      {/* Main Content with bottom margin for footer spacing */}
       <div className="max-w-6xl mx-auto mt-10 px-5 mb-20">
         <div className="flex items-start gap-6">
-          {/* Profile Picture */}
           <div className="relative w-28 h-28">
             <img
               src={profileImg || ""}
@@ -159,7 +221,6 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* User Info */}
           <div className="flex-1">
             <p className="text-gray-500 text-sm">@{username}</p>
             <h1 className="text-2xl font-semibold">{username}</h1>
@@ -221,8 +282,8 @@ const Profile = () => {
           ))}
         </div>
 
-        {/* Dynamic Content */}
-        {renderTabContent()}
+        {/* Tab Content with consistent min-height */}
+        <div className="mt-6 min-h-[450px]">{renderTabContent()}</div>
       </div>
 
       <Footer />
