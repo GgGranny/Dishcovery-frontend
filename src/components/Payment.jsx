@@ -33,8 +33,8 @@ const Payment = () => {
                 total_amount: total_amount,
                 product_service_charge: 0,
                 product_delivery_charge: 0,
-                success_url: `http://localhost:5173/payment/success?product-code=${formData.product_code}`,
-                failure_url: "http://localhost:5173/payment/fail",
+                success_url: `http://localhost:8080/api/payment/esewa/payment-success`,
+                failure_url: "http://localhost:8080/api/payment/esewa/payment-failed",
                 signed_field_names: signed_field_name,
                 signature: signature
             }

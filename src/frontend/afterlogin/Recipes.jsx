@@ -32,7 +32,7 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${1}`
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${13}`
         );
         const recipesArray = Array.isArray(res.data) ? res.data : [res.data];
         setRecipes(recipesArray);
@@ -186,14 +186,14 @@ const Recipes = () => {
                 <div
                   key={recipe.recipeId}
                   className="relative bg-white shadow-md rounded-xl overflow-hidden border hover:shadow-xl hover:scale-105 transition transform cursor-pointer"
-                  onClick={() => navigate(`/aboutrecipes/${recipe.recipeId}`)}
+                  onClick={() => navigate(`/ aboutrecipes / ${recipe.recipeId} `)}
                 >
                   {/* Image */}
                   <div className="h-44 w-full overflow-hidden rounded-t-xl">
                     <img
                       src={
                         recipe.thumbnail
-                          ? `data:image/jpeg;base64,${recipe.thumbnail}`
+                          ? `data: image / jpeg; base64, ${recipe.thumbnail} `
                           : "https://via.placeholder.com/300"
                       }
                       alt={recipe.recipeName}
