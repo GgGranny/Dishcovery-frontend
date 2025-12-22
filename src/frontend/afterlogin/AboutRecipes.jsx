@@ -74,11 +74,11 @@ const AboutRecipes = () => {
 
         // Check if recipe has video
         let videoStreamUrl = "";
-        
-        if (data.video?.videoId) {
+
+        if (data.videoId !== null) {
           try {
             const videoResponse = await axios.get(
-              `http://localhost:8080/api/v1/videos/stream/segment/${data.video.videoId}/master.m3u8`,
+              `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             videoStreamUrl = videoResponse.config.url;
@@ -91,7 +91,7 @@ const AboutRecipes = () => {
         // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
         setVideoUrl(videoStreamUrl);
-        
+
         // Set video title and description from the video object in recipe response
         if (data.video) {
           setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
@@ -114,7 +114,7 @@ const AboutRecipes = () => {
   // Fetch comments for THIS recipe
   const fetchComments = async () => {
     if (!token || !id) return;
-    
+
     try {
       const res = await axios.get(
         `http://localhost:8080/api/comments/c1/comment/${id}`,
@@ -122,7 +122,7 @@ const AboutRecipes = () => {
       );
 
       let commentsArray = [];
-      
+
       if (Array.isArray(res.data)) {
         commentsArray = res.data;
       } else if (res.data && Array.isArray(res.data.comments)) {
@@ -141,7 +141,7 @@ const AboutRecipes = () => {
       );
 
       setCommentsList(sortedComments);
-      
+
       // Initialize likes for each comment
       const likesState = {};
       sortedComments.forEach(comment => {
@@ -155,7 +155,7 @@ const AboutRecipes = () => {
         }
       });
       setCommentLikes(likesState);
-      
+
     } catch (err) {
       console.error("Failed to fetch comments:", err);
       setCommentsList([]);
@@ -175,7 +175,7 @@ const AboutRecipes = () => {
     }
 
     const currentState = commentLikes[commentId] || { likes: 0, dislikes: 0, userReaction: null };
-    
+
     // Optimistic update
     let newLikes = currentState.likes;
     let newDislikes = currentState.dislikes;
@@ -247,7 +247,7 @@ const AboutRecipes = () => {
         content: comment.trim(),
         username: username,
       };
-      
+
       const response = await axios.post(
         `http://localhost:8080/api/comments/c1/comment`,
         requestBody,
@@ -261,10 +261,10 @@ const AboutRecipes = () => {
 
       setComment("");
       fetchComments();
-      
+
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
-      
+
       // Try alternative method with query parameters if first fails
       try {
         await axios.post(
@@ -285,7 +285,7 @@ const AboutRecipes = () => {
 
         setComment("");
         fetchComments();
-        
+
       } catch (secondErr) {
         console.error("Second attempt also failed:", secondErr);
         alert(`Failed to post comment. Please try again. Error: ${secondErr.message}`);
@@ -411,11 +411,10 @@ const AboutRecipes = () => {
               {["ingredients", "instructions", "video", "nutrients"].map((tab) => (
                 <button
                   key={tab}
-                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${
-                    activeTab === tab
-                      ? "text-green-600 font-semibold"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`pb-2 px-1 capitalize text-sm font-medium relative ${activeTab === tab
+                    ? "text-green-600 font-semibold"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab}
@@ -462,10 +461,10 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
-                {recipe.video ? (
+                {recipe.videoId ? (
                   <>
                     <VideoPlayer src={videoUrl} />
-                    
+
                     {/* Video Title and Description */}
                     <div className="mt-6 space-y-4">
                       {videoTitle && (
@@ -474,14 +473,14 @@ const AboutRecipes = () => {
                           <div className="h-1 w-16 bg-green-500 rounded-full"></div>
                         </div>
                       )}
-                      
+
                       {videoDescription && (
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                           <h4 className="font-medium text-gray-700 mb-2">About this video:</h4>
                           <p className="text-gray-600">{videoDescription}</p>
                         </div>
                       )}
-                      
+
                       {/* Video Metadata */}
                       {recipe.video && (
                         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-4">
@@ -548,11 +547,10 @@ const AboutRecipes = () => {
                   <button
                     onClick={postComment}
                     disabled={!comment.trim() || postingComment}
-                    className={`px-5 py-2 rounded-lg font-medium ${
-                      !comment.trim() || postingComment
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }`}
+                    className={`px-5 py-2 rounded-lg font-medium ${!comment.trim() || postingComment
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700 text-white"
+                      }`}
                   >
                     {postingComment ? "Posting..." : "Post Comment"}
                   </button>
@@ -569,9 +567,9 @@ const AboutRecipes = () => {
                   commentsList.map((commentItem, index) => {
                     const commentId = commentItem.id || commentItem.commentId || index;
                     const likesData = commentLikes[commentId] || { likes: 0, dislikes: 0, userReaction: null };
-                    
+
                     return (
-                      <div 
+                      <div
                         key={commentId}
                         className="border-b border-gray-100 pb-6 last:border-0 last:pb-0"
                       >
@@ -595,28 +593,26 @@ const AboutRecipes = () => {
                         <p className="text-gray-700 pl-11 mb-3">
                           {commentItem.content || commentItem.comment || "No comment text"}
                         </p>
-                        
+
                         {/* Like/Dislike Buttons */}
                         <div className="flex items-center gap-4 pl-11">
                           <button
                             onClick={() => handleCommentReaction(commentId, "LIKE")}
-                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${
-                              likesData.userReaction === "LIKE" 
-                                ? "bg-green-50 text-green-600" 
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${likesData.userReaction === "LIKE"
+                              ? "bg-green-50 text-green-600"
+                              : "text-gray-600 hover:bg-gray-100"
+                              }`}
                           >
                             <FaThumbsUp className={likesData.userReaction === "LIKE" ? "text-green-600" : "text-gray-500"} />
                             <span className="font-medium">{likesData.likes}</span>
                           </button>
-                          
+
                           <button
                             onClick={() => handleCommentReaction(commentId, "DISLIKE")}
-                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${
-                              likesData.userReaction === "DISLIKE" 
-                                ? "bg-red-50 text-red-600" 
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${likesData.userReaction === "DISLIKE"
+                              ? "bg-red-50 text-red-600"
+                              : "text-gray-600 hover:bg-gray-100"
+                              }`}
                           >
                             <FaThumbsDown className={likesData.userReaction === "DISLIKE" ? "text-red-600" : "text-gray-500"} />
                             <span className="font-medium">{likesData.dislikes}</span>
@@ -692,7 +688,7 @@ const AboutRecipes = () => {
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Most Liked Comment</span>
                 <span className="font-bold text-green-600">
-                  {commentsList.length > 0 
+                  {commentsList.length > 0
                     ? Math.max(...commentsList.map(c => commentLikes[c.id || c.commentId]?.likes || 0))
                     : 0}
                 </span>
