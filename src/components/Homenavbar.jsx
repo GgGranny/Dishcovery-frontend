@@ -80,7 +80,7 @@ const Homenavbar = () => {
           >
             Recipes
           </NavLink>
-
+{/* 
           <NavLink
             to="/categories"
             onClick={() => window.scrollTo(0, 0)}
@@ -89,7 +89,7 @@ const Homenavbar = () => {
             }
           >
             Categories
-          </NavLink>
+          </NavLink> */}
 
           <NavLink
             to="/community"
@@ -294,7 +294,7 @@ const Homenavbar = () => {
                 Recipes
               </NavLink>
 
-              <NavLink
+              {/* <NavLink
                 to="/categories"
                 onClick={() => {
                   setMenuOpen(false);
@@ -305,7 +305,7 @@ const Homenavbar = () => {
                 }
               >
                 Categories
-              </NavLink>
+              </NavLink> */}
 
               <NavLink
                 to="/community"

@@ -54,6 +54,7 @@ const Login = () => {
         // Store token and refresh token
         localStorage.setItem("token", data.token);
         localStorage.setItem("refreshToken", data.refreshToken);
+        localStorage.setItem("userid",data.user_id);
 
         // ⭐ Store username in localStorage
         localStorage.setItem("username", username);
