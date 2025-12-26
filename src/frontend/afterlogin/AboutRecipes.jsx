@@ -98,6 +98,10 @@ const AboutRecipes = () => {
           setVideoDescription(data.video.description || "Video tutorial for this recipe");
           console.log("Video title from recipe:", data.video.title);
           console.log("Video description from recipe:", data.video.description);
+        } else {
+          // Set default values if no video object
+          setVideoTitle(`${data.recipeName} Video Tutorial`);
+          setVideoDescription("Watch how to make this delicious recipe step by step.");
         }
 
       } catch (err) {
@@ -461,6 +465,25 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
+<<<<<<< HEAD
+                {videoUrl ? (
+                  <>
+                    <VideoPlayer src={videoUrl} />
+                    
+                    {/* Video Title and Description - Always shown below video */}
+                    <div className="mt-6 space-y-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          {videoTitle || `${recipe.recipeName} Video Tutorial`}
+                        </h3>
+                      </div>
+                      
+                      <div>
+                        <p className="text-gray-600">
+                          {videoDescription || "Watch how to make this delicious recipe step by step."}
+                        </p>
+                      </div>
+=======
                 {recipe.videoId ? (
                   <>
                     <VideoPlayer src={videoUrl} />
@@ -498,10 +521,33 @@ const AboutRecipes = () => {
                           )}
                         </div>
                       )}
+>>>>>>> 0877d66eddb9a61d8f204c83090336b6429c58f5
                     </div>
                   </>
                 ) : (
-                  <p className="text-gray-600 text-center py-8">No video available for this recipe.</p>
+                  <div className="space-y-6">
+                    <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <GiKnifeFork className="text-gray-400 text-4xl mx-auto mb-4" />
+                        <p className="text-gray-600">No video available for this recipe.</p>
+                      </div>
+                    </div>
+                    
+                    {/* Still show title and description even if no video */}
+                    <div className="mt-6 space-y-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          {videoTitle || `${recipe.recipeName} Video Tutorial`}
+                        </h3>
+                      </div>
+                      
+                      <div>
+                        <p className="text-gray-600">
+                          {videoDescription || "Watch how to make this delicious recipe step by step."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

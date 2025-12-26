@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
+import { FaHeart, FaBookmark, FaRegComment, FaRegPlusSquare } from "react-icons/fa"; // Icons for activity
 
 const Profile = () => {
   const username = localStorage.getItem("username") || "User";
@@ -152,22 +153,41 @@ const Profile = () => {
     </div>
   );
 
+  // Map activity type to icon
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case "like":
+        return <FaHeart className="text-red-500" />;
+      case "comment":
+        return <FaRegComment className="text-blue-500" />;
+      case "saved":
+        return <FaBookmark className="text-green-500" />;
+      case "posted":
+        return <FaRegPlusSquare className="text-purple-500" />;
+      default:
+        return <FaRegPlusSquare className="text-gray-400" />;
+    }
+  };
+
   const renderTabContent = () => {
     if (loading) return <p className="mt-6 text-gray-500">Loading...</p>;
 
     if (activeTab === "activity") {
       return activity.length > 0 ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto">
           {activity.map((item, i) => (
             <div
               key={i}
-              className="bg-white shadow-md rounded-lg p-4 border border-gray-200 flex flex-col sm:flex-row sm:justify-between"
+              className="bg-white shadow-md rounded-lg p-4 border border-gray-200 flex items-start gap-4 hover:bg-green-50 transition"
             >
-              <div>
-                <p className="font-medium">{item.title}</p>
+              <div className="mt-1">{getActivityIcon(item.type)}</div>
+              <div className="flex-1">
+                <p className="font-medium text-gray-800">{item.title}</p>
                 <p className="text-gray-600 text-sm mt-1">{item.subtitle}</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  {new Date(item.date).toLocaleString()}
+                </p>
               </div>
-              <p className="text-gray-400 text-xs mt-2 sm:mt-0">{item.date}</p>
             </div>
           ))}
         </div>
