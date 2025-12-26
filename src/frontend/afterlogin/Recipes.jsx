@@ -23,7 +23,7 @@ const Recipes = () => {
   // Fixed cuisine list
   const CUISINE_LIST = [
     "Newari",
-    "Tharu", 
+    "Tharu",
     "Thakali",
     "Kirati",
     "Magar",
@@ -49,14 +49,14 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${5}`,
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${11}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
             }
           }
         );
-        
+
         // Handle different response structures
         let recipesArray = [];
         if (Array.isArray(res.data)) {
@@ -68,7 +68,7 @@ const Recipes = () => {
         } else {
           recipesArray = [res.data];
         }
-        
+
         console.log("Fetched recipes:", recipesArray);
         setRecipes(recipesArray);
         setFilteredRecipes(recipesArray);
@@ -92,17 +92,17 @@ const Recipes = () => {
     console.log("Selected Categories:", selectedCategories);
     console.log("Selected Cuisines:", selectedCuisines);
     console.log("Selected Difficulty:", selectedDifficulty);
-    
+
     let filtered = [...recipes];
 
     // Filter by category (Veg/Non-Veg)
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter((recipe) => 
+      filtered = filtered.filter((recipe) =>
         recipe.category && selectedCategories.includes(recipe.category)
       );
       console.log("After category filter:", filtered.length);
     }
-    
+
     // Filter by cuisine
     if (selectedCuisines.length > 0) {
       filtered = filtered.filter((recipe) => {
@@ -118,10 +118,10 @@ const Recipes = () => {
       });
       console.log("After cuisine filter:", filtered.length);
     }
-    
+
     // Filter by difficulty
     if (selectedDifficulty.length > 0) {
-      filtered = filtered.filter((recipe) => 
+      filtered = filtered.filter((recipe) =>
         recipe.difficulty && selectedDifficulty.includes(recipe.difficulty)
       );
       console.log("After difficulty filter:", filtered.length);
@@ -170,16 +170,16 @@ const Recipes = () => {
   };
 
   // Check if any filter is active
-  const isFilterActive = selectedCategories.length > 0 || 
-                         selectedCuisines.length > 0 || 
-                         selectedDifficulty.length > 0;
+  const isFilterActive = selectedCategories.length > 0 ||
+    selectedCuisines.length > 0 ||
+    selectedDifficulty.length > 0;
 
   // Function to render star ratings
   const renderStars = (rating = 0) => {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    
+
     return (
       <div className="flex items-center">
         {[...Array(fullStars)].map((_, i) => (
@@ -331,12 +331,12 @@ const Recipes = () => {
           {/* Header with count */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">
-              {isFilterActive 
+              {isFilterActive
                 ? `Filtered Recipes (${filteredRecipes.length})`
                 : "All Recipes"}
             </h2>
             <span className="text-sm text-gray-500">
-              {isFilterActive 
+              {isFilterActive
                 ? `Showing ${filteredRecipes.length} of ${recipes.length} recipes`
                 : `Total ${recipes.length} recipes`}
             </span>
@@ -352,8 +352,8 @@ const Recipes = () => {
           ) : error ? (
             <div className="text-center mt-10 p-4 bg-red-50 rounded-lg">
               <p className="text-red-600 font-medium">{error}</p>
-              <button 
-                onClick={() => window.location.reload()} 
+              <button
+                onClick={() => window.location.reload()}
                 className="mt-2 text-sm text-red-500 hover:text-red-700"
               >
                 Try Again
@@ -363,7 +363,7 @@ const Recipes = () => {
             <div className="text-center mt-10 p-8 bg-gray-50 rounded-xl">
               <p className="text-gray-600 text-lg mb-2">No recipes found</p>
               <p className="text-gray-500 text-sm mb-4">
-                {isFilterActive 
+                {isFilterActive
                   ? "No recipes match your selected filters"
                   : "No recipes available yet"}
               </p>
@@ -414,17 +414,17 @@ const Recipes = () => {
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Description */}
                     <p className="text-xs text-gray-600 line-clamp-2 mb-2">
                       {recipe.description || "No description available."}
                     </p>
-                    
+
                     {/* Meta Information - Time, Difficulty, and Cuisine/Category tag */}
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1 text-[10px] text-gray-500">
                         <span className="font-medium">
-                          {recipe.cookTime} 
+                          {recipe.cookTime}
                         </span>
                         <span>•</span>
                         <span>{recipe.difficulty || "Easy"}</span>

@@ -33,12 +33,11 @@ const Payment = () => {
                 total_amount: total_amount,
                 product_service_charge: 0,
                 product_delivery_charge: 0,
-                success_url: "http://localhost:5173/payment/success",
-                failure_url: "http://localhost:5173/payment/fail",
+                success_url: `http://localhost:8080/api/payment/esewa/payment-success`,
+                failure_url: "http://localhost:8080/api/payment/esewa/payment-failed",
                 signed_field_names: signed_field_name,
                 signature: signature
             }
-
             const form = document.createElement("form");
             form.setAttribute("method", "POST");
             form.setAttribute("action", "https://rc-epay.esewa.com.np/api/epay/main/v2/form");
