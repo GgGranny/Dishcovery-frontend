@@ -75,6 +75,7 @@ import PaymentFail from "./components/PaymentFail";
 import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 import PaymentSuccess from "./components/PaymentSuccess";
 import Payments from "./components/Payment";
+import Chat from "./frontend/afterlogin/Chat";
 
 
 function App() {
@@ -88,6 +89,7 @@ function App() {
         <Route path="/otp" element={<Otp />} />
         <Route path="/about" element={<About />} />
         <Route path="/communities" element={<Communities />} />
+        <Route path="/chat" element={<Chat />} />
 
         {/* 🔐 Protected Routes (NO main page needed) */}
         <Route element={<ProtectedRoute />}>
