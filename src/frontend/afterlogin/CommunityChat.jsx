@@ -18,15 +18,16 @@ const CommunityChat = () => {
     const fileRef = useRef(null);
     const isConnected = useRef(false);
     const params = useParams();
+    const [hasFile, setHasFile] = useState(false);
     const [filePayload, setFilePayload] = useState({
         type: "",
         content: "",
         sender: "",
         file: null,
-        fileName: null,
-        fileSize: null,
-        fileType: null
-    })
+        fileName: "",
+        fileSize: "",
+        fileType: ""
+    });
 
     const onMessageReceived = (message) => {
         setMessageData(prev => {
@@ -62,13 +63,30 @@ const CommunityChat = () => {
     useEffect(() => {
         console.log(messageData);
     }, [])
-    const handleMessageSent = async () => {
+
+
+    const handleMessageSent = async (type) => {
+
         const payload = {
             content: message,
             type: "CHAT",
             sender: localStorage.getItem("username"),
         };
-        sendMsg(payload, params.id);
+        console.log(filePayload);
+        if (type === "FILE") {
+            sendFiles(filePayload, params.id)
+            setFilePayload({
+                type: "",
+                content: "",
+                sender: "",
+                file: null,
+                fileName: "",
+                fileSize: "",
+                fileType: ""
+            });
+        } else {
+            sendMsg(payload, params.id);
+        }
         shouldAutoScroll.current = true;
         setMessage("");
     };
@@ -111,27 +129,34 @@ const CommunityChat = () => {
             }
         }
     };
+    useEffect(() => {
+        return () => {
+            if (filePayload.previewUrl) {
+                URL.revokeObjectURL(filePayload.previewUrl);
+            }
+        };
+    }, [filePayload.previewUrl]);
     const handleFileChange = async (e) => {
-        e.preventDefault();
         const file = e.target.files[0];
         if (!file) return;
+
+        const previewUrl = URL.createObjectURL(file);
         const base64File = await toBase64(file);
-        if (base64File) {
-            const cleanBase64File = base64File.split(",")[1];
-            console.log(cleanBase64File)
-            const payload = {
-                type: "FILE",
-                content: "this is tets",
-                sender: localStorage.getItem("username"),
-                file: cleanBase64File,
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type
-            }
-            // setFilePayload(prev => ({ ...prev, ...payload }));
-            sendFiles(payload, params.id);
-        }
-        console.log(file);
+        const cleanBase64File = base64File.split(",")[1];
+
+        setFilePayload({
+            type: "FILE",
+            content: message,
+            sender: localStorage.getItem("username"),
+            file: cleanBase64File,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            previewUrl
+        });
+
+        setHasFile(true);
+        // sendFiles(payload, params.id);
     }
     const toBase64 = file => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -146,12 +171,14 @@ const CommunityChat = () => {
     const decodeBase64 = (data, fileType) => {
         const decodedData = atob(data);
         const byteNumber = new Array(decodedData.length);
-        for (let i = 0; i <= decodedData.length; i++) {
+        for (let i = 0; i < decodedData.length; i++) {
             byteNumber[i] = decodedData.charCodeAt(i);
         }
         const blob = new Blob([new Uint8Array(byteNumber)], { type: fileType });
         return URL.createObjectURL(blob);
     }
+
+    const isImage = filePayload?.fileType.startsWith("image/");
 
     return (
         <div className="flex h-screen bg-gray-100">
@@ -170,7 +197,7 @@ const CommunityChat = () => {
                     {/* Received message */}
                     {messageData.map((message) => {
                         const isOwnMessage = message.senderId === Number(localStorage.getItem("userid"));
-                        if (message.type === "CHAT" || message.type === null) {
+                        if (message.type === "CHAT") {
                             return isOwnMessage ? (
                                 <div className="flex justify-end" key={message.chatId}>
                                     <div className="bg-blue-500 text-white p-3 rounded-lg shadow max-w-sm">
@@ -179,6 +206,9 @@ const CommunityChat = () => {
                                 </div>
                             ) : (
                                 <div className="flex items-start gap-2" key={message.chatId}>
+                                    <div className="overflow-hidden">
+                                        <img src={message.user_profile} alt="" className="h-7 w-7 border rounded-full content-center" />
+                                    </div>
                                     <div className="bg-white p-3 rounded-lg shadow max-w-sm">
                                         <p className="text-sm font-semibold">
                                             {message.sender}
@@ -195,11 +225,10 @@ const CommunityChat = () => {
                             const url = decodeBase64(message.fileData, message.fileType);
                             // setFileUrl(url);
                             if (isOwnMessage) {
-                                if (!message.content || !message.fileData) return null;
                                 return (
                                     <div className="flex justify-end" key={message.chatId}>
                                         <div className="bg-blue-500 text-white p-3 rounded-lg shadow max-w-sm">
-                                            {message.content && (
+                                            {message?.content && (
                                                 <p className="text-sm">{message.content}</p>
                                             )}
                                             {fType.startsWith("image/") && (
@@ -208,6 +237,7 @@ const CommunityChat = () => {
                                                     download={message.fileName}
                                                     className="block mt-2 underline"
                                                 >
+                                                    {console.log("this is true")}
                                                     <img src={url} alt={message.fileName} className="" />
                                                 </a>
                                             )}
@@ -229,6 +259,9 @@ const CommunityChat = () => {
 
                             return (
                                 <div className="flex items-start gap-2" key={message.chatId}>
+                                    <div className="overflow-hidden">
+                                        <img src={message.user_profile} alt="" className="h-7 w-7 border rounded-full content-center" />
+                                    </div>
                                     <div className="bg-white p-3 rounded-lg shadow max-w-sm">
                                         <p className="text-sm font-semibold">{message.sender}</p>
                                         <p className="text-sm text-gray-700">{message.content}</p>
@@ -264,13 +297,20 @@ const CommunityChat = () => {
                 {/* Input */}
                 <div className="bg-white border-t p-4">
                     <form className="flex gap-2 items-end">
-                        {/* {!filePayload.file && (<input
-                            type="text"
-                            placeholder="Type your message..."
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />)} */}
+                        {hasFile && (
+                            <div>
+                                {isImage ? (
+                                    <div>
+                                        <img src={filePayload.previewUrl} className="h-20 w-20 rounded-md mb-2" />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 p-2 border rounded">
+                                        <span>📄</span>
+                                        <span className="text-sm">{filePayload.fileName}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <input
                             type="text"
                             placeholder="Type your message..."
@@ -278,18 +318,6 @@ const CommunityChat = () => {
                             onChange={(e) => setMessage(e.target.value)}
                             className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         />
-                        {/* {filePayload.fileName && (
-                            <div className="flex flex-col w-full">
-                                <img src={decodeBase64(filePayload.file, filePayload.fileType)} className="h-20 w-20 rounded-md mb-2" />
-                                <input
-                                    type="text"
-                                    placeholder="Type your message..."
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                />
-                            </div>
-                        )} */}
                         <div className="flex items-center gap-2">
                             <div className="cursor-pointer">
                                 <input type="file" className="hidden" ref={fileRef} onChange={handleFileChange} multiple />
@@ -298,7 +326,10 @@ const CommunityChat = () => {
                             <button
                                 type="submit"
                                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 cursor-pointer"
-                                onClick={handleMessageSent}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleMessageSent(filePayload?.fileName ? "FILE" : "CAHT")
+                                }}
                             >
                                 Send
                             </button>
