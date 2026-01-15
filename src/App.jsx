@@ -76,6 +76,7 @@ import AboutRecipes from "./frontend/afterlogin/AboutRecipes";
 import PaymentSuccess from "./components/PaymentSuccess";
 import Payments from "./components/Payment";
 import Chat from "./frontend/afterlogin/Chat";
+import CommunityChat from "./frontend/afterlogin/CommunityChat";
 
 
 function App() {
@@ -104,6 +105,7 @@ function App() {
           <Route path="/payment/fail" element={<PaymentFail />} />
           <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/community/chat/:id" element={<CommunityChat />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -465,25 +465,6 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
-<<<<<<< HEAD
-                {videoUrl ? (
-                  <>
-                    <VideoPlayer src={videoUrl} />
-                    
-                    {/* Video Title and Description - Always shown below video */}
-                    <div className="mt-6 space-y-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
-                          {videoTitle || `${recipe.recipeName} Video Tutorial`}
-                        </h3>
-                      </div>
-                      
-                      <div>
-                        <p className="text-gray-600">
-                          {videoDescription || "Watch how to make this delicious recipe step by step."}
-                        </p>
-                      </div>
-=======
                 {recipe.videoId ? (
                   <>
                     <VideoPlayer src={videoUrl} />
@@ -521,7 +502,6 @@ const AboutRecipes = () => {
                           )}
                         </div>
                       )}
->>>>>>> 0877d66eddb9a61d8f204c83090336b6429c58f5
                     </div>
                   </>
                 ) : (
@@ -532,7 +512,7 @@ const AboutRecipes = () => {
                         <p className="text-gray-600">No video available for this recipe.</p>
                       </div>
                     </div>
-                    
+
                     {/* Still show title and description even if no video */}
                     <div className="mt-6 space-y-4">
                       <div>
@@ -540,7 +520,7 @@ const AboutRecipes = () => {
                           {videoTitle || `${recipe.recipeName} Video Tutorial`}
                         </h3>
                       </div>
-                      
+
                       <div>
                         <p className="text-gray-600">
                           {videoDescription || "Watch how to make this delicious recipe step by step."}

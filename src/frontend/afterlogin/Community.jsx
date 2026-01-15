@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import recipeBg from "../../assets/recipe-bg.png";
-import { 
-  FaPlus, 
-  FaFire, 
-  FaComments, 
-  FaClock, 
-  FaUser, 
+import {
+  FaPlus,
+  FaFire,
+  FaComments,
+  FaClock,
+  FaUser,
   FaThumbsUp,
   FaComment,
   FaBookmark,
@@ -15,8 +15,14 @@ import {
   FaTimes,
   FaChevronDown
 } from "react-icons/fa";
+import axios from "axios";
+import { fetchCommunity } from "../../api/Community";
+import { connect } from "../../api/WebSocket";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Community() {
+  let navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("recent");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [categories] = useState([
@@ -27,11 +33,13 @@ export default function Community() {
     { id: "baking", name: "Baking Tips", icon: "🍰" },
     { id: "bread", name: "Bread Making", icon: "🥖" }
   ]);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [serverAllDiscussion, setServerAllDiscussion] = useState([]);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
-  
+
   const [newDiscussion, setNewDiscussion] = useState({
-    title: "",
+    communityName: "",
     category: "",
     description: "",
     tags: ""
@@ -41,56 +49,37 @@ export default function Community() {
 
   // Discussions state - in real app, this would come from API
   const [discussions, setDiscussions] = useState({
-    recent: [
-      {
-        id: 1,
-        category: "Baking Tips",
-        time: "2 hours ago",
-        title: "Best substitutes for eggs in baking?",
-        content: "I'm trying to make my grandmother's cake recipe vegan-friendly. What are the best egg substitutes that won't affect the texture?",
-        author: "John Doe",
-        replies: 23,
-        likes: 45,
-        isLiked: false,
-        isBookmarked: false,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-        tags: ["vegan", "baking", "substitutes"],
-        categoryColor: "bg-green-200",
-        textColor: "text-green-700"
-      },
-      {
-        id: 2,
-        category: "Meal Planning",
-        time: "4 hours ago",
-        title: "Weekly Meal Prep Ideas – Share Your Favorites!",
-        content: "Looking for new meal prep ideas for busy weekdays. What are your go-to recipes that reheat well?",
-        author: "Sarah",
-        replies: 18,
-        likes: 32,
-        isLiked: true,
-        isBookmarked: false,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-        tags: ["meal-prep", "planning", "time-saving"],
-        categoryColor: "bg-blue-200",
-        textColor: "text-blue-700"
-      },
-      {
-        id: 3,
-        category: "Bread Making",
-        time: "6 hours ago",
-        title: "Help! My sourdough starter isn't bubbling",
-        content: "I've been feeding my starter for a week but it's not showing much activity. Any troubleshooting tips?",
-        author: "Emma Thompson",
-        replies: 34,
-        likes: 67,
-        isLiked: false,
-        isBookmarked: true,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma",
-        tags: ["sourdough", "bread", "troubleshooting"],
-        categoryColor: "bg-yellow-200",
-        textColor: "text-yellow-700"
-      }
-    ],
+    recent: [{
+      id: 4,
+      category: "Trending",
+      time: "1 day ago",
+      title: "10 Most-Liked Dinner Recipes of the Week",
+      content: "These dinner ideas took the community by storm — quick, tasty, and healthy!",
+      author: "Community",
+      replies: 52,
+      likes: 148,
+      isLiked: true,
+      isBookmarked: false,
+      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Community",
+      tags: ["trending", "dinner", "recipes"],
+      categoryColor: "bg-red-200",
+      textColor: "text-red-700"
+    }, {
+      id: 4,
+      category: "Trending",
+      time: "1 day ago",
+      title: "10 Most-Liked Dinner Recipes of the Week",
+      content: "These dinner ideas took the community by storm — quick, tasty, and healthy!",
+      author: "Community",
+      replies: 52,
+      likes: 148,
+      isLiked: true,
+      isBookmarked: false,
+      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Community",
+      tags: ["trending", "dinner", "recipes"],
+      categoryColor: "bg-red-200",
+      textColor: "text-red-700"
+    }],
     popular: [
       {
         id: 4,
@@ -161,11 +150,24 @@ export default function Community() {
     ]
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await fetchCommunity();
+        setServerAllDiscussion(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchData();
+  }, [])
+
   const [userDiscussions, setUserDiscussions] = useState([]);
   const username = localStorage.getItem("username") || "User";
+  const userId = localStorage.getItem("userid") || 0;
 
   // Handle creating new discussion
-  const handleCreateDiscussion = () => {
+  const handleCreateDiscussion = async () => {
     if (!newDiscussion.title.trim() || !newDiscussion.description.trim()) {
       alert("Please fill in all required fields");
       return;
@@ -176,41 +178,49 @@ export default function Community() {
       return;
     }
 
-    const tagsArray = newDiscussion.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
+    // const tagsArray = newDiscussion.tags
+    //   .split(',')
+    //   .map(tag => tag.trim())
+    //   .filter(tag => tag.length > 0);
 
     const newDiscussionObj = {
-      id: Date.now(),
       category: categories.find(c => c.id === newDiscussion.category)?.name || "General",
-      time: "Just now",
-      title: newDiscussion.title,
-      content: newDiscussion.description,
-      author: username,
-      replies: 0,
-      likes: 0,
-      isLiked: false,
-      isBookmarked: false,
-      authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-      tags: tagsArray,
-      categoryColor: "bg-green-200",
-      textColor: "text-green-700"
+      communityName: newDiscussion.title,
+      description: newDiscussion.description,
+      username: username,
+      userId: Number(userId),
+      isPrivate: isPrivate,
+      tags: newDiscussion.tags,
     };
+    try {
+      console.log(newDiscussionObj);
+      const resposne = await axios.post("http://localhost:8080/api/community/create",
+        newDiscussionObj,
+        {
+          headers: {
+            "Authorization": "Bearer " + localStorage.getItem("token"),
+            "Content-type": "application/json"
+          }
+        }
+      );
+      console.log(resposne.body);
+    } catch (e) {
+      console.error("failed to create community", e);
+    }
 
-    // Add to recent discussions
-    const updatedRecent = [newDiscussionObj, ...discussions.recent];
-    setDiscussions(prev => ({
-      ...prev,
-      recent: updatedRecent
-    }));
+    // // Add to recent discussions
+    // const updatedRecent = [newDiscussionObj, ...discussions.recent];
+    // setDiscussions(prev => ({
+    //   ...prev,
+    //   recent: updatedRecent
+    // }));
 
-    // Add to user's discussions
-    setUserDiscussions(prev => [newDiscussionObj, ...prev]);
+    // // Add to user's discussions
+    // setUserDiscussions(prev => [newDiscussionObj, ...prev]);
 
-    // Save to localStorage (for demo)
-    const allDiscussions = JSON.parse(localStorage.getItem('communityDiscussions') || '[]');
-    localStorage.setItem('communityDiscussions', JSON.stringify([newDiscussionObj, ...allDiscussions]));
+    // // Save to localStorage (for demo)
+    // const allDiscussions = JSON.parse(localStorage.getItem('communityDiscussions') || '[]');
+    // localStorage.setItem('communityDiscussions', JSON.stringify([newDiscussionObj, ...allDiscussions]));
 
     // Reset form
     setNewDiscussion({
@@ -221,7 +231,7 @@ export default function Community() {
     });
     setShowCategoryDropdown(false);
     setShowCreateModal(false);
-    
+
     alert("Discussion posted successfully!");
   };
 
@@ -261,12 +271,22 @@ export default function Community() {
   // Filter discussions by category
   const getFilteredDiscussions = () => {
     if (selectedCategory === "all") return discussions[activeTab];
-    
+
     return discussions[activeTab].filter(discussion => {
       const categoryName = categories.find(c => c.id === selectedCategory)?.name;
       return discussion.category === categoryName;
     });
   };
+
+  // const onMessageReceived = (messages, communityId) => {
+  //   console.log(messages);
+  // }
+  const joinChatRoom = (communityId) => {
+    // connect(onMessageReceived, communityId);
+    navigate(`/community/chat/${communityId}`);
+    console.log(communityId);
+  }
+
 
   const filteredDiscussions = getFilteredDiscussions();
 
@@ -275,7 +295,7 @@ export default function Community() {
     if (!showCreateModal) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-auto">
         <div className="bg-white rounded-xl max-w-xl w-full">
           {/* Modal Header */}
           <div className="p-6 border-b">
@@ -315,20 +335,19 @@ export default function Community() {
                 <button
                   type="button"
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className={`w-full p-3 border rounded-lg text-left flex justify-between items-center ${
-                    newDiscussion.category 
-                      ? "border-green-500 bg-green-50" 
-                      : "border-gray-300"
-                  }`}
+                  className={`w-full p-3 border rounded-lg text-left flex justify-between items-center ${newDiscussion.category
+                    ? "border-green-500 bg-green-50"
+                    : "border-gray-300"
+                    }`}
                 >
                   <span className={newDiscussion.category ? "text-gray-800" : "text-gray-500"}>
-                    {newDiscussion.category 
-                      ? categories.find(c => c.id === newDiscussion.category)?.name 
+                    {newDiscussion.category
+                      ? categories.find(c => c.id === newDiscussion.category)?.name
                       : "Select category"}
                   </span>
                   <FaChevronDown className={`transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
                 </button>
-                
+
                 {showCategoryDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {categories.slice(1).map((category) => (
@@ -380,6 +399,30 @@ export default function Community() {
                 Add relevant tags to help others find your discussion
               </p>
             </div>
+            <div className="flex items-center gap-3">
+              <label
+                htmlFor="privacy-toggle"
+                className="text-sm font-medium"
+              >
+                Is Private Discussion:
+              </label>
+
+              <button
+                id="privacy-toggle"
+                type="button"
+                role="radio"
+                aria-checked={isPrivate}
+                onClick={() => setIsPrivate(prev => !prev)}
+                className={`relative w-10 h-5 rounded-full transition-colors
+        ${isPrivate ? "bg-blue-600" : "bg-gray-300"}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white
+          transition-transform
+          ${isPrivate ? "translate-x-5" : "translate-x-0"}`}
+                />
+              </button>
+            </div>
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
@@ -399,8 +442,8 @@ export default function Community() {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
     );
   };
 
@@ -413,34 +456,36 @@ export default function Community() {
             {discussion.category}
           </span>
           <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
-            <FaClock size={12} /> {discussion.time} • Posted by {discussion.author}
+            <FaClock size={12} /> {discussion.createdAt} • Posted by {discussion.username}
           </p>
         </div>
         <img
-          src={discussion.authorAvatar}
-          alt={discussion.author}
+          src={discussion.userProfile}
+          alt={discussion.username}
           className="w-10 h-10 rounded-full border"
         />
       </div>
-      
+
       <h3 className="text-xl font-semibold mt-3 hover:text-green-600 cursor-pointer">
         {discussion.title}
       </h3>
       <p className="text-gray-600 mt-2">{discussion.content}</p>
-      
+
       {discussion.tags && discussion.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-3">
-          {discussion.tags.map((tag, index) => (
+          {/* {discussion.tags.map((tag, index) => (
             <span
               key={index}
               className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
             >
               #{tag}
             </span>
-          ))}
+          ))} */}
+
+          #{discussion.tags}
         </div>
       )}
-      
+
       <div className="flex justify-between items-center mt-4">
         <div className="flex items-center gap-6 text-gray-700 text-sm">
           <button
@@ -462,7 +507,7 @@ export default function Community() {
             <FaShare />
           </button>
         </div>
-        <button className="text-green-600 hover:text-green-800 font-medium text-sm">
+        <button className="text-green-600 hover:text-green-800 font-medium text-sm" onClick={() => joinChatRoom(discussion.id)}>
           Join Discussion →
         </button>
       </div>
@@ -482,7 +527,7 @@ export default function Community() {
         <div className="absolute inset-0 bg-black/50 flex flex-col justify-center items-center text-white text-center">
           <h1 className="text-4xl font-bold mb-2">Community Discussions</h1>
           <p className="text-lg">Share, learn, and connect with fellow food enthusiasts</p>
-          
+
           {/* Create Discussion Button in Hero */}
           <button
             onClick={() => setShowCreateModal(true)}
@@ -501,17 +546,16 @@ export default function Community() {
             <h2 className="text-xl font-semibold">Categories</h2>
             <span className="text-sm text-gray-500">{filteredDiscussions.length} discussions</span>
           </div>
-          
+
           <div className="space-y-2">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${
-                  selectedCategory === category.id
-                    ? "bg-green-50 text-green-700 border-l-4 border-green-500"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${selectedCategory === category.id
+                  ? "bg-green-50 text-green-700 border-l-4 border-green-500"
+                  : "text-gray-700 hover:bg-gray-50"
+                  }`}
               >
                 <span className="text-lg">{category.icon}</span>
                 <span>{category.name}</span>
@@ -560,11 +604,10 @@ export default function Community() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 pb-1 ${
-                    activeTab === tab.id
-                      ? "text-green-600 border-b-2 border-green-600"
-                      : "text-gray-600 hover:text-black"
-                  }`}
+                  className={`flex items-center gap-2 pb-1 ${activeTab === tab.id
+                    ? "text-green-600 border-b-2 border-green-600"
+                    : "text-gray-600 hover:text-black"
+                    }`}
                 >
                   {tab.icon}
                   {tab.label}
@@ -582,8 +625,8 @@ export default function Community() {
 
           {/* Tab Content */}
           <div className="space-y-6">
-            {filteredDiscussions.length > 0 ? (
-              filteredDiscussions.map((discussion) => (
+            {serverAllDiscussion.length > 0 ? (
+              serverAllDiscussion.map((discussion) => (
                 <DiscussionCard
                   key={discussion.id}
                   discussion={discussion}
