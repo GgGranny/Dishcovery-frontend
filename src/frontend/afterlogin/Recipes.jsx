@@ -49,7 +49,7 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${11}`,
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${5}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
