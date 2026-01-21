@@ -17,6 +17,7 @@ export const fetchProfile = async (userId) => {
 }
 
 export const decodeImage = async (data) => {
+    if (data.startsWith("https://")) return;
     const decodedData = atob(data);
     const byteNumber = new Array(decodedData.length);
     for (let i = 0; i <= byteNumber.length - 1; i++) {
