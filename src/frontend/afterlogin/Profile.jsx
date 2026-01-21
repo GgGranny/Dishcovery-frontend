@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Form, useNavigate } from "react-router-dom";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import { FaHeart, FaBookmark, FaRegComment, FaRegPlusSquare } from "react-icons/fa"; // Icons for activity
+import axios from "axios";
+import { decodeImage, fetchProfile } from "../../api/Profile";
+import { IoPerson } from "react-icons/io5";
 
 const Profile = () => {
   const username = localStorage.getItem("username") || "User";
@@ -10,9 +13,7 @@ const Profile = () => {
   const userId = localStorage.getItem("userid");
   const navigate = useNavigate();
 
-  const [profileImg, setProfileImg] = useState(
-    localStorage.getItem("profileImageDataUrl") || null
-  );
+  const [profileImg, setProfileImg] = useState(null);
 
   const [activeTab, setActiveTab] = useState("my");
 
@@ -30,19 +31,42 @@ const Profile = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // Upload Profile Image
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    async function userPrfoileFetch() {
+      const rs = await fetchProfile(userId);
+      const img = await decodeImage(rs);
+      setProfileImg(img);
+    }
+    console.log(userId);
+    if (userId) {
+      userPrfoileFetch(userId);
+    }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      setProfileImg(base64);
-      localStorage.setItem("profileImageDataUrl", base64);
-    };
-    reader.readAsDataURL(file);
+  }, [userId]);
+
+  // Upload Profile Image
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    const data = new FormData();
+    data.append("file", file);
+    if (!file) return;
+    try {
+      const response = await axios.post(`http://localhost:8080/upload/profile/${Number(userId)}`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          }
+        },
+      );
+      const rs = await fetchProfile(userId);
+      const url = await decodeImage(rs);
+      setProfileImg(url);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
 
   const triggerFileSelect = () => {
     document.getElementById("profileUpload").click();
@@ -218,14 +242,17 @@ const Profile = () => {
       <div className="max-w-6xl mx-auto mt-10 px-5 mb-20">
         <div className="flex items-start gap-6">
           <div className="relative w-28 h-28">
-            <img
-              src={profileImg || ""}
-              alt="Profile"
-              className={`w-28 h-28 rounded-full border object-cover cursor-pointer transition hover:opacity-80 ${
-                !profileImg ? "bg-gray-200" : ""
-              }`}
-              onClick={triggerFileSelect}
-            />
+            {profileImg ? (
+              <img
+                src={profileImg}
+                alt="Profile"
+                className={`w-28 h-28 rounded-full border object-cover cursor-pointer transition hover:opacity-80 ${!profileImg ? "bg-gray-200" : ""
+                  }`}
+                onClick={triggerFileSelect}
+              />
+            ) : (
+              <IoPerson />
+            )}
             <input
               type="file"
               id="profileUpload"
@@ -285,11 +312,10 @@ const Profile = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 flex items-center gap-1 ${
-                activeTab === tab
-                  ? "border-b-2 border-green-500 text-green-600 font-medium"
-                  : "text-gray-500"
-              }`}
+              className={`pb-2 flex items-center gap-1 ${activeTab === tab
+                ? "border-b-2 border-green-500 text-green-600 font-medium"
+                : "text-gray-500"
+                }`}
             >
               {tab === "my" && "My Recipes"}
               {tab === "saved" && "Saved Recipes"}
