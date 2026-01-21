@@ -34,6 +34,11 @@ const Profile = () => {
   useEffect(() => {
     async function userPrfoileFetch() {
       const rs = await fetchProfile(userId);
+      if (rs.startsWith("https://")) {
+        setProfileImg(rs);
+        return;
+      }
+      console.log(rs);
       const img = await decodeImage(rs);
       setProfileImg(img);
     }
