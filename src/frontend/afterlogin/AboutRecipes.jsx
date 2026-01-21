@@ -29,17 +29,11 @@ const AboutRecipes = () => {
   const username = localStorage.getItem("username") || "User";
 
   const parseSteps = (steps) => {
-    if (!steps) return [];
-    
     let parsed = [];
     try {
-      if (Array.isArray(steps)) {
-        parsed = steps.flat().map(String);
-      } else if (typeof steps === "string") {
-        parsed = steps.split(/\n|,/).map((s) => s.trim());
-      } else if (typeof steps === "object" && steps !== null) {
-        parsed = Object.values(steps).flat().map(String);
-      }
+      if (Array.isArray(steps)) parsed = steps.flat().map(String);
+      else if (typeof steps === "string") parsed = steps.split(/\n|,/).map((s) => s.trim());
+      else if (typeof steps === "object" && steps !== null) parsed = Object.values(steps).flat().map(String);
 
       return parsed
         .map((s) =>
@@ -59,7 +53,7 @@ const AboutRecipes = () => {
     }
   };
 
-  // Fetch recipe and video
+  // Fetch recipe
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!token) {
@@ -81,10 +75,13 @@ const AboutRecipes = () => {
         // Check if recipe has video
         let videoStreamUrl = "";
 
-        if (data.videoId) {
+        if (data.videoId !== null) {
           try {
-            // Construct the video stream URL
-            videoStreamUrl = `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`;
+            const videoResponse = await axios.get(
+              `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            videoStreamUrl = videoResponse.config.url;
             console.log("Video stream URL:", videoStreamUrl);
           } catch (videoErr) {
             console.error("Video stream error:", videoErr);
@@ -95,18 +92,21 @@ const AboutRecipes = () => {
         setRecipe({ ...data, steps: cleanSteps });
         setVideoUrl(videoStreamUrl);
 
-        // Set video title and description
+        // Set video title and description from the video object in recipe response
         if (data.video) {
           setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
           setVideoDescription(data.video.description || "Video tutorial for this recipe");
+          console.log("Video title from recipe:", data.video.title);
+          console.log("Video description from recipe:", data.video.description);
         } else {
+          // Set default values if no video object
           setVideoTitle(`${data.recipeName} Video Tutorial`);
           setVideoDescription("Watch how to make this delicious recipe step by step.");
         }
 
       } catch (err) {
         console.error("Recipe fetch error:", err);
-        setError(err.response?.data?.message || "Failed to load recipe.");
+        setError("Failed to load recipe.");
       } finally {
         setLoading(false);
       }
@@ -115,7 +115,7 @@ const AboutRecipes = () => {
     fetchRecipe();
   }, [id, token]);
 
-  // Fetch comments for this recipe
+  // Fetch comments for THIS recipe
   const fetchComments = async () => {
     if (!token || !id) return;
 
@@ -238,7 +238,7 @@ const AboutRecipes = () => {
     }
   };
 
-  // Post comment for this recipe
+  // Post comment for THIS recipe
   const postComment = async () => {
     if (!comment.trim() || !token || postingComment || !id) {
       return;
@@ -252,7 +252,7 @@ const AboutRecipes = () => {
         username: username,
       };
 
-      await axios.post(
+      const response = await axios.post(
         `http://localhost:8080/api/comments/c1/comment`,
         requestBody,
         {
@@ -268,7 +268,32 @@ const AboutRecipes = () => {
 
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
-      alert(`Failed to post comment. Please try again. Error: ${err.message}`);
+
+      // Try alternative method with query parameters if first fails
+      try {
+        await axios.post(
+          `http://localhost:8080/api/comments/c1/comment`,
+          null,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            params: {
+              recipeId: id,
+              content: comment.trim(),
+              username: username,
+            },
+          }
+        );
+
+        setComment("");
+        fetchComments();
+
+      } catch (secondErr) {
+        console.error("Second attempt also failed:", secondErr);
+        alert(`Failed to post comment. Please try again. Error: ${secondErr.message}`);
+      }
     } finally {
       setPostingComment(false);
     }
@@ -292,34 +317,27 @@ const AboutRecipes = () => {
   };
 
   const renderIngredients = () => {
-    if (!recipe) return ["No ingredients listed"];
+    if (!recipe) return [];
     if (Array.isArray(recipe.ingredients)) return recipe.ingredients;
     if (typeof recipe.ingredients === "string")
       return recipe.ingredients.split(/,|\n/).map((i) => i.trim()).filter(Boolean);
     return ["No ingredients listed"];
   };
 
-  const renderNutrients = () => {
-    if (recipe?.nutrients && Object.keys(recipe.nutrients).length > 0) {
-      return recipe.nutrients;
-    }
-    
-    // Default static nutrients
-    return {
-      Calories: "250 kcal",
-      Protein: "10 g",
-      Carbohydrates: "35 g",
-      Fat: "8 g",
-      Fiber: "5 g",
-      Sugar: "7 g",
-    };
+  const staticNutrients = {
+    Calories: "250 kcal",
+    Protein: "10 g",
+    Carbohydrates: "35 g",
+    Fat: "8 g",
+    Fiber: "5 g",
+    Sugar: "7 g",
   };
 
   const rating = 4.7;
   const reviews = 88;
   const totalStars = 5;
 
-  if (loading) {
+  if (loading)
     return (
       <div className="w-full min-h-screen bg-white">
         <Homenavbar />
@@ -332,9 +350,8 @@ const AboutRecipes = () => {
         <Footer />
       </div>
     );
-  }
 
-  if (error || !recipe) {
+  if (error || !recipe)
     return (
       <div className="w-full min-h-screen bg-white">
         <Homenavbar />
@@ -344,7 +361,7 @@ const AboutRecipes = () => {
             <p className="text-gray-600 mb-4">{error || "Recipe not found"}</p>
             <button
               onClick={() => navigate("/recipes")}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition duration-300"
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
             >
               Back to Recipes
             </button>
@@ -353,7 +370,6 @@ const AboutRecipes = () => {
         <Footer />
       </div>
     );
-  }
 
   return (
     <div className="w-full min-h-screen bg-white text-gray-900">
@@ -384,7 +400,7 @@ const AboutRecipes = () => {
               <img
                 src={`data:image/jpeg;base64,${recipe.thumbnail}`}
                 alt={recipe.recipeName}
-                className="w-full h-64 object-cover rounded-xl shadow"
+                className="w-100 h-64 object-cover rounded-xl shadow"
               />
             ) : (
               <div className="w-full h-64 bg-gray-200 rounded-xl flex items-center justify-center">
@@ -422,7 +438,7 @@ const AboutRecipes = () => {
                 <ul className="space-y-3">
                   {renderIngredients().map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <input type="checkbox" className="w-5 h-5 mt-0.5 accent-green-600" />
+                      <input type="checkbox" className="w-5 h-5 mt-0.5" />
                       <span className="text-gray-700">{item}</span>
                     </li>
                   ))}
@@ -434,18 +450,14 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Instructions</h2>
                 <ol className="space-y-4">
-                  {recipe.steps && recipe.steps.length > 0 ? (
-                    recipe.steps.map((step, idx) => (
-                      <li key={idx} className="flex items-start gap-4">
-                        <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white text-sm font-semibold rounded-full flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <p className="text-gray-700 pt-1">{step}</p>
-                      </li>
-                    ))
-                  ) : (
-                    <p className="text-gray-500">No instructions available for this recipe.</p>
-                  )}
+                  {recipe.steps?.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-4">
+                      <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white text-sm font-semibold rounded-full flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <p className="text-gray-700 pt-1">{step}</p>
+                    </li>
+                  ))}
                 </ol>
               </div>
             )}
@@ -453,23 +465,43 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
-                {videoUrl ? (
+                {recipe.videoId ? (
                   <>
                     <VideoPlayer src={videoUrl} />
-                    
+
                     {/* Video Title and Description */}
                     <div className="mt-6 space-y-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
-                          {videoTitle}
-                        </h3>
-                      </div>
-                      
-                      <div>
-                        <p className="text-gray-600">
-                          {videoDescription}
-                        </p>
-                      </div>
+                      {videoTitle && (
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-800 mb-1">{videoTitle}</h3>
+                          <div className="h-1 w-16 bg-green-500 rounded-full"></div>
+                        </div>
+                      )}
+
+                      {videoDescription && (
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                          <h4 className="font-medium text-gray-700 mb-2">About this video:</h4>
+                          <p className="text-gray-600">{videoDescription}</p>
+                        </div>
+                      )}
+
+                      {/* Video Metadata */}
+                      {recipe.video && (
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-4">
+                          {recipe.video.uploadedAt && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Uploaded:</span>
+                              <span>{new Date(recipe.video.uploadedAt).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          {recipe.video.contentType && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Format:</span>
+                              <span className="px-2 py-1 bg-gray-100 rounded">{recipe.video.contentType.split('/')[1]}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -480,18 +512,18 @@ const AboutRecipes = () => {
                         <p className="text-gray-600">No video available for this recipe.</p>
                       </div>
                     </div>
-                    
+
                     {/* Still show title and description even if no video */}
                     <div className="mt-6 space-y-4">
                       <div>
                         <h3 className="text-xl font-bold text-gray-800 mb-2">
-                          {videoTitle}
+                          {videoTitle || `${recipe.recipeName} Video Tutorial`}
                         </h3>
                       </div>
-                      
+
                       <div>
                         <p className="text-gray-600">
-                          {videoDescription}
+                          {videoDescription || "Watch how to make this delicious recipe step by step."}
                         </p>
                       </div>
                     </div>
@@ -504,7 +536,7 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Nutrition Facts</h2>
                 <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(renderNutrients()).map(([key, value]) => (
+                  {Object.entries(staticNutrients).map(([key, value]) => (
                     <div
                       key={key}
                       className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between hover:bg-gray-100 transition"
@@ -531,7 +563,7 @@ const AboutRecipes = () => {
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Share your thoughts about this recipe..."
-                  className="w-full border border-gray-300 rounded-lg p-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-300"
+                  className="w-full border border-gray-300 rounded-lg p-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   rows="3"
                 />
                 <div className="flex justify-between items-center mt-3">
@@ -541,7 +573,7 @@ const AboutRecipes = () => {
                   <button
                     onClick={postComment}
                     disabled={!comment.trim() || postingComment}
-                    className={`px-5 py-2 rounded-lg font-medium transition duration-300 ${!comment.trim() || postingComment
+                    className={`px-5 py-2 rounded-lg font-medium ${!comment.trim() || postingComment
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-green-600 hover:bg-green-700 text-white"
                       }`}
@@ -592,7 +624,7 @@ const AboutRecipes = () => {
                         <div className="flex items-center gap-4 pl-11">
                           <button
                             onClick={() => handleCommentReaction(commentId, "LIKE")}
-                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition duration-300 ${likesData.userReaction === "LIKE"
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${likesData.userReaction === "LIKE"
                               ? "bg-green-50 text-green-600"
                               : "text-gray-600 hover:bg-gray-100"
                               }`}
@@ -603,7 +635,7 @@ const AboutRecipes = () => {
 
                           <button
                             onClick={() => handleCommentReaction(commentId, "DISLIKE")}
-                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition duration-300 ${likesData.userReaction === "DISLIKE"
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition ${likesData.userReaction === "DISLIKE"
                               ? "bg-red-50 text-red-600"
                               : "text-gray-600 hover:bg-gray-100"
                               }`}
@@ -633,7 +665,7 @@ const AboutRecipes = () => {
             <p className="text-gray-700 text-sm mb-4">
               Sharing my passion for cooking one recipe at a time. Love experimenting with flavors!
             </p>
-            <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition duration-300">
+            <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition">
               View Profile
             </button>
           </div>
@@ -683,10 +715,7 @@ const AboutRecipes = () => {
                 <span className="text-gray-600">Most Liked Comment</span>
                 <span className="font-bold text-green-600">
                   {commentsList.length > 0
-                    ? Math.max(...commentsList.map(c => {
-                        const commentId = c.id || c.commentId;
-                        return commentLikes[commentId]?.likes || 0;
-                      }))
+                    ? Math.max(...commentsList.map(c => commentLikes[c.id || c.commentId]?.likes || 0))
                     : 0}
                 </span>
               </div>
@@ -700,18 +729,17 @@ const AboutRecipes = () => {
               {[1, 2, 3].map((item) => (
                 <div
                   key={item}
-                  className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition duration-300 group"
-                  onClick={() => navigate(`/recipe/${item}`)}
+                  className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition group"
                 >
                   <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                     <img
                       src={`https://source.unsplash.com/random/200x200?food=${item}`}
                       alt={`Similar Recipe ${item}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition"
                     />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-1 group-hover:text-green-600 transition duration-300">
+                    <h3 className="font-semibold text-sm mb-1 group-hover:text-green-600 transition">
                       Delicious Recipe {item}
                     </h3>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
