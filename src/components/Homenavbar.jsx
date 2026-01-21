@@ -2,14 +2,15 @@ import React, { useState, useEffect } from "react";
 import logo from "../assets/logo.png";
 import { NavLink } from "react-router-dom";
 import { HiMenu, HiX, HiUser } from "react-icons/hi";
+import { decodeImage, fetchProfile } from "../api/Profile";
 
 const Homenavbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const userId = localStorage.getItem("userid");
 
-  const [profileImg] = useState(
-    localStorage.getItem("profileImageDataUrl") || null
-  );
+  const [profileImg, setProfileImg] = useState("" || null);
+
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
@@ -37,6 +38,13 @@ const Homenavbar = () => {
         setProfileOpen(false);
       }
     };
+
+    async function fetchUserProfile() {
+      const rs = await fetchProfile(userId);
+      const img = await decodeImage(rs);
+      setProfileImg(img);
+    }
+    fetchUserProfile();
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -80,7 +88,7 @@ const Homenavbar = () => {
           >
             Recipes
           </NavLink>
-{/* 
+          {/* 
           <NavLink
             to="/categories"
             onClick={() => window.scrollTo(0, 0)}
