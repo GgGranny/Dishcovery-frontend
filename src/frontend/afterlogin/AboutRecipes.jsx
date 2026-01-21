@@ -658,13 +658,29 @@ const AboutRecipes = () => {
           {/* Author Card */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center">
             <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white shadow">
-              <img src={authorImg} alt="Author" className="w-full h-full object-cover" />
+              {recipe.profilePicture ? (
+                <img
+                  src={`http://localhost:8080/${recipe.profilePicture.replace(/\\/g, "/")}`}
+                  alt="Author"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={authorImg}
+                  alt="Author"
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
-            <h3 className="font-bold text-lg mb-1">Hi! I'm {username}</h3>
-            <p className="text-gray-600 text-sm mb-3">Food Enthusiast & Recipe Creator</p>
+
+            <h3 className="font-bold text-lg mb-1">
+              Hi! I'm {recipe.username}
+            </h3>
+
             <p className="text-gray-700 text-sm mb-4">
-              Sharing my passion for cooking one recipe at a time. Love experimenting with flavors!
+              Sharing delicious recipes with love and passion for cooking.
             </p>
+
             <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition">
               View Profile
             </button>

@@ -13,7 +13,7 @@ const Navbar = () => {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="text-2xl font-bold text-green-600">Discovery</span>
+          <span className="text-2xl font-bold text-green-600">Dishcovery</span>
         </div>
 
         {/* Desktop Links */}

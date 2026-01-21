@@ -63,7 +63,7 @@ const Homenavbar = () => {
           onClick={() => window.scrollTo(0, 0)}
         >
           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="text-2xl font-bold text-gray-800">Discovery</span>
+          <span className="text-2xl font-bold text-gray-800">Dishcovery</span>
         </div>
 
         {/* CENTER NAV (Desktop) */}
