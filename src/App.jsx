@@ -77,6 +77,7 @@ import PaymentSuccess from "./components/PaymentSuccess";
 import Payments from "./components/Payment";
 import Chat from "./frontend/afterlogin/Chat";
 import CommunityChat from "./frontend/afterlogin/CommunityChat";
+import PremiumPage from "./frontend/afterlogin/PremiumPage";
 
 
 function App() {
@@ -101,11 +102,12 @@ function App() {
           <Route path="/setting" element={<Setting />} />
           <Route path="/community" element={<Community />} />
           <Route path="/aboutus" element={<AboutUs />} />
-          <Route path="/payment" element={<Payments />} />
+          <Route path="/checkout" element={<Payments />} />
           <Route path="/payment/fail" element={<PaymentFail />} />
           <Route path="/aboutrecipes/:id" element={<AboutRecipes />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/community/chat/:id" element={<CommunityChat />} />
+          <Route path="/premium" element={<PremiumPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

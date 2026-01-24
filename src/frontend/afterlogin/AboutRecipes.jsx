@@ -7,7 +7,6 @@ import authorImg from "../../assets/profile.jpg";
 import { FaStar, FaRegStar, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
-import VideoPlayer from "../../components/VideoPlayer";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -24,9 +23,19 @@ const AboutRecipes = () => {
   const [commentsList, setCommentsList] = useState([]);
   const [postingComment, setPostingComment] = useState(false);
   const [commentLikes, setCommentLikes] = useState({});
+  const [profilePictureUrl, setProfilePictureUrl] = useState(authorImg);
 
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
+
+  // Create authenticated axios instance
+  const authAxios = axios.create({
+    baseURL: "http://localhost:8080",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
+  });
 
   const parseSteps = (steps) => {
     let parsed = [];
@@ -53,77 +62,206 @@ const AboutRecipes = () => {
     }
   };
 
+  // Function to load profile picture as blob to avoid auth popup
+  const loadProfilePicture = async (imagePath) => {
+    if (!imagePath || !token) {
+      setProfilePictureUrl(authorImg);
+      return;
+    }
+
+    try {
+      // Clean the path
+      const cleanPath = imagePath.replace(/\\/g, "/");
+      
+      // Fetch the image as blob with authentication
+      const response = await fetch(`http://localhost:8080/${cleanPath}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setProfilePictureUrl(url);
+      } else {
+        setProfilePictureUrl(authorImg);
+      }
+    } catch (err) {
+      console.error("Failed to load profile picture:", err);
+      setProfilePictureUrl(authorImg);
+    }
+  };
+
   // Fetch recipe
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!token) {
-        setError("You are not logged in.");
+        setError("You are not logged in. Please login to view recipes.");
         setLoading(false);
+        navigate("/login");
         return;
       }
 
       try {
         // Fetch recipe
-        const response = await axios.get(
-          `http://localhost:8080/api/recipes/recipe/r1/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await authAxios.get(`/api/recipes/recipe/r1/${id}`);
+        
         const data = response.data;
         console.log("Recipe data:", data);
+        
+        if (!data || Object.keys(data).length === 0) {
+          throw new Error("Recipe data is empty");
+        }
+        
         const cleanSteps = parseSteps(data.steps);
 
-        // Check if recipe has video
-        let videoStreamUrl = "";
+        // Handle video - construct URL without fetching
+        let videoInfo = {
+          title: "",
+          description: "",
+          hasVideo: false,
+          videoId: data.videoId
+        };
 
-        if (data.videoId !== null) {
-          try {
-            const videoResponse = await axios.get(
-              `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            videoStreamUrl = videoResponse.config.url;
-            console.log("Video stream URL:", videoStreamUrl);
-          } catch (videoErr) {
-            console.error("Video stream error:", videoErr);
+        if (data.videoId) {
+          videoInfo.hasVideo = true;
+          
+          // Set video metadata from the recipe data
+          if (data.video) {
+            videoInfo.title = data.video.title || `${data.recipeName} Video Tutorial`;
+            videoInfo.description = data.video.description || "Video tutorial for this recipe";
+          } else {
+            videoInfo.title = `${data.recipeName} Video Tutorial`;
+            videoInfo.description = "Watch how to make this delicious recipe step by step.";
           }
+          
+          // IMPORTANT: We'll let the VideoPlayer handle authentication
+          // Don't include token in URL to avoid auth popup
+          const videoStreamUrl = `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`;
+          setVideoUrl(videoStreamUrl);
         }
 
         // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
-        setVideoUrl(videoStreamUrl);
+        setVideoTitle(videoInfo.title);
+        setVideoDescription(videoInfo.description);
 
-        // Set video title and description from the video object in recipe response
-        if (data.video) {
-          setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
-          setVideoDescription(data.video.description || "Video tutorial for this recipe");
-          console.log("Video title from recipe:", data.video.title);
-          console.log("Video description from recipe:", data.video.description);
-        } else {
-          // Set default values if no video object
-          setVideoTitle(`${data.recipeName} Video Tutorial`);
-          setVideoDescription("Watch how to make this delicious recipe step by step.");
+        // Load profile picture
+        if (data.profilePicture) {
+          loadProfilePicture(data.profilePicture);
         }
 
       } catch (err) {
         console.error("Recipe fetch error:", err);
-        setError("Failed to load recipe.");
+        
+        if (err.response) {
+          // Handle specific HTTP errors
+          switch (err.response.status) {
+            case 401:
+              setError("Your session has expired. Please login again.");
+              localStorage.removeItem("token");
+              localStorage.removeItem("username");
+              navigate("/login");
+              break;
+            case 403:
+              setError("You don't have permission to view this recipe.");
+              break;
+            case 404:
+              setError("Recipe not found.");
+              break;
+            default:
+              setError(`Failed to load recipe: ${err.response.statusText}`);
+          }
+        } else if (err.request) {
+          setError("Network error. Please check your connection.");
+        } else {
+          setError("Failed to load recipe. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchRecipe();
-  }, [id, token]);
+  }, [id, token, navigate]);
+
+  // Custom VideoPlayer component with better error handling
+  const VideoPlayer = ({ src, title }) => {
+    const videoRef = React.useRef(null);
+    const [videoError, setVideoError] = React.useState(false);
+    
+    React.useEffect(() => {
+      if (src && videoRef.current) {
+        // Clear any previous error
+        setVideoError(false);
+        videoRef.current.load();
+      }
+    }, [src]);
+
+    const handleVideoError = (e) => {
+      console.error("Video loading error:", e);
+      setVideoError(true);
+    };
+
+    const handleVideoLoadStart = () => {
+      // Set a timeout to show error if video takes too long to load
+      setTimeout(() => {
+        if (videoRef.current && videoRef.current.readyState === 0) {
+          setVideoError(true);
+        }
+      }, 5000); // 5 second timeout
+    };
+
+    return (
+      <div className="video-container">
+        {src ? (
+          <>
+            <video
+              ref={videoRef}
+              controls
+              className="w-full h-64 md:h-96 rounded-lg"
+              onError={handleVideoError}
+              onLoadStart={handleVideoLoadStart}
+              preload="metadata"
+              crossOrigin="anonymous"
+            >
+              <source src={src} type="application/x-mpegURL" />
+              Your browser does not support the video tag.
+            </video>
+            
+            {videoError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">
+                  Video cannot be loaded. The video might be unavailable or you may not have permission to view it.
+                </p>
+                <button
+                  onClick={() => setVideoError(false)}
+                  className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <GiKnifeFork className="text-gray-400 text-4xl mx-auto mb-4" />
+              <p className="text-gray-600">No video available for this recipe.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Fetch comments for THIS recipe
   const fetchComments = async () => {
     if (!token || !id) return;
 
     try {
-      const res = await axios.get(
-        `http://localhost:8080/api/comments/c1/comment/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await authAxios.get(`/api/comments/c1/comment/${id}`);
 
       let commentsArray = [];
 
@@ -219,15 +357,9 @@ const AboutRecipes = () => {
     });
 
     try {
-      await axios.post(
-        "http://localhost:8080/api/comments/c1/comment/like",
-        { commentId, type },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+      await authAxios.post(
+        "/api/comments/c1/comment/like",
+        { commentId, type }
       );
       // Refresh comments to get updated counts
       fetchComments();
@@ -252,15 +384,9 @@ const AboutRecipes = () => {
         username: username,
       };
 
-      const response = await axios.post(
-        `http://localhost:8080/api/comments/c1/comment`,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+      await authAxios.post(
+        `/api/comments/c1/comment`,
+        requestBody
       );
 
       setComment("");
@@ -268,17 +394,13 @@ const AboutRecipes = () => {
 
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
-
+      
       // Try alternative method with query parameters if first fails
       try {
-        await axios.post(
-          `http://localhost:8080/api/comments/c1/comment`,
+        await authAxios.post(
+          `/api/comments/c1/comment`,
           null,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
             params: {
               recipeId: id,
               content: comment.trim(),
@@ -401,6 +523,9 @@ const AboutRecipes = () => {
                 src={`data:image/jpeg;base64,${recipe.thumbnail}`}
                 alt={recipe.recipeName}
                 className="w-100 h-64 object-cover rounded-xl shadow"
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/800x400?text=Recipe+Image";
+                }}
               />
             ) : (
               <div className="w-full h-64 bg-gray-200 rounded-xl flex items-center justify-center">
@@ -465,70 +590,44 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
-                {recipe.videoId ? (
-                  <>
-                    <VideoPlayer src={videoUrl} />
+                
+                {/* Video Player */}
+                <VideoPlayer src={videoUrl} title={videoTitle} />
 
-                    {/* Video Title and Description */}
-                    <div className="mt-6 space-y-4">
-                      {videoTitle && (
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-800 mb-1">{videoTitle}</h3>
-                          <div className="h-1 w-16 bg-green-500 rounded-full"></div>
+                {/* Video Title and Description */}
+                <div className="mt-6 space-y-4">
+                  {videoTitle && (
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">{videoTitle}</h3>
+                      <div className="h-1 w-16 bg-green-500 rounded-full"></div>
+                    </div>
+                  )}
+
+                  {videoDescription && (
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <h4 className="font-medium text-gray-700 mb-2">About this video:</h4>
+                      <p className="text-gray-600">{videoDescription}</p>
+                    </div>
+                  )}
+
+                  {/* Video Metadata */}
+                  {recipe.video && (
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-4">
+                      {recipe.video.uploadedAt && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Uploaded:</span>
+                          <span>{new Date(recipe.video.uploadedAt).toLocaleDateString()}</span>
                         </div>
                       )}
-
-                      {videoDescription && (
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                          <h4 className="font-medium text-gray-700 mb-2">About this video:</h4>
-                          <p className="text-gray-600">{videoDescription}</p>
-                        </div>
-                      )}
-
-                      {/* Video Metadata */}
-                      {recipe.video && (
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-4">
-                          {recipe.video.uploadedAt && (
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Uploaded:</span>
-                              <span>{new Date(recipe.video.uploadedAt).toLocaleDateString()}</span>
-                            </div>
-                          )}
-                          {recipe.video.contentType && (
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Format:</span>
-                              <span className="px-2 py-1 bg-gray-100 rounded">{recipe.video.contentType.split('/')[1]}</span>
-                            </div>
-                          )}
+                      {recipe.video.contentType && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Format:</span>
+                          <span className="px-2 py-1 bg-gray-100 rounded">{recipe.video.contentType.split('/')[1]}</span>
                         </div>
                       )}
                     </div>
-                  </>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <GiKnifeFork className="text-gray-400 text-4xl mx-auto mb-4" />
-                        <p className="text-gray-600">No video available for this recipe.</p>
-                      </div>
-                    </div>
-
-                    {/* Still show title and description even if no video */}
-                    <div className="mt-6 space-y-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
-                          {videoTitle || `${recipe.recipeName} Video Tutorial`}
-                        </h3>
-                      </div>
-
-                      <div>
-                        <p className="text-gray-600">
-                          {videoDescription || "Watch how to make this delicious recipe step by step."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
@@ -658,19 +757,14 @@ const AboutRecipes = () => {
           {/* Author Card */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center">
             <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white shadow">
-              {recipe.profilePicture ? (
-                <img
-                  src={`http://localhost:8080/${recipe.profilePicture.replace(/\\/g, "/")}`}
-                  alt="Author"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={authorImg}
-                  alt="Author"
-                  className="w-full h-full object-cover"
-                />
-              )}
+              <img
+                src={profilePictureUrl}
+                alt="Author"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = authorImg;
+                }}
+              />
             </div>
 
             <h3 className="font-bold text-lg mb-1">
@@ -681,13 +775,16 @@ const AboutRecipes = () => {
               Sharing delicious recipes with love and passion for cooking.
             </p>
 
-            <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition">
+            <button 
+              onClick={() => navigate(`/profile/${recipe.username}`)}
+              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition"
+            >
               View Profile
             </button>
           </div>
 
           {/* Video Info Card */}
-          {recipe.video && (
+          {recipe.videoId && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <h2 className="font-bold text-lg mb-4">Video Information</h2>
               <div className="space-y-3">
@@ -703,7 +800,7 @@ const AboutRecipes = () => {
                     <p className="text-sm text-gray-600">{videoDescription}</p>
                   </div>
                 )}
-                {recipe.video.uploadedAt && (
+                {recipe.video?.uploadedAt && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-1">Upload Date</h3>
                     <p className="text-sm text-gray-600">{new Date(recipe.video.uploadedAt).toLocaleDateString()}</p>
@@ -746,6 +843,7 @@ const AboutRecipes = () => {
                 <div
                   key={item}
                   className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition group"
+                  onClick={() => navigate(`/recipes/${item}`)}
                 >
                   <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                     <img
