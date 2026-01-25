@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
-import authorImg from "../../assets/profile.jpg";
 import { FaStar, FaRegStar, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
@@ -23,7 +22,10 @@ const AboutRecipes = () => {
   const [commentsList, setCommentsList] = useState([]);
   const [postingComment, setPostingComment] = useState(false);
   const [commentLikes, setCommentLikes] = useState({});
-  const [profilePictureUrl, setProfilePictureUrl] = useState(authorImg);
+  const [profilePictureUrl, setProfilePictureUrl] = useState("");
+  const [authorId, setAuthorId] = useState(null);
+  const [authorData, setAuthorData] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
@@ -62,34 +64,74 @@ const AboutRecipes = () => {
     }
   };
 
-  // Function to load profile picture as blob to avoid auth popup
-  const loadProfilePicture = async (imagePath) => {
-    if (!imagePath || !token) {
-      setProfilePictureUrl(authorImg);
+  // Function to fetch user profile by userid
+  const fetchUserProfile = async (userid) => {
+    if (!userid || !token) {
+      console.log("No userid or token available");
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      console.log(`Fetching profile for userid: ${userid}`);
+      
+      // Direct API call to your backend endpoint
+      const response = await authAxios.get(`/user/profile/${userid}`);
+      console.log("Profile API Response:", response.data);
+      
+      if (response.data && response.data.data && response.data.data !== "no user profile") {
+        const profileData = response.data.data;
+        
+        // Check what type of data we have
+        if (profileData.startsWith('data:image/')) {
+          // Already a data URL
+          console.log("Profile is data URL");
+          setProfilePictureUrl(profileData);
+        } else if (profileData.startsWith('http')) {
+          // External URL
+          console.log("Profile is external URL");
+          setProfilePictureUrl(profileData);
+        } else {
+          // Base64 data without prefix
+          console.log("Profile is base64 data");
+          setProfilePictureUrl(`data:image/jpeg;base64,${profileData}`);
+        }
+      } else {
+        console.log("No profile picture found in database");
+        // Don't set any image - will show placeholder
+        setProfilePictureUrl("");
+      }
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+      if (err.response) {
+        console.error("Error response:", err.response.data);
+        console.error("Error status:", err.response.status);
+      }
+      setProfilePictureUrl("");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Function to fetch user data by userid
+  const fetchUserData = async (userid) => {
+    if (!userid || !token) {
+      console.log("Cannot fetch user data: no userid or token");
       return;
     }
 
     try {
-      // Clean the path
-      const cleanPath = imagePath.replace(/\\/g, "/");
+      console.log(`Fetching user data for userid: ${userid}`);
+      const response = await authAxios.get(`/user/edit/${userid}`);
+      console.log("User data API Response:", response.data);
       
-      // Fetch the image as blob with authentication
-      const response = await fetch(`http://localhost:8080/${cleanPath}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setProfilePictureUrl(url);
+      if (response.data) {
+        setAuthorData(response.data);
       } else {
-        setProfilePictureUrl(authorImg);
+        console.log("No user data received");
       }
     } catch (err) {
-      console.error("Failed to load profile picture:", err);
-      setProfilePictureUrl(authorImg);
+      console.error("Failed to fetch user data:", err);
     }
   };
 
@@ -104,11 +146,11 @@ const AboutRecipes = () => {
       }
 
       try {
-        // Fetch recipe
+        console.log(`Fetching recipe with ID: ${id}`);
         const response = await authAxios.get(`/api/recipes/recipe/r1/${id}`);
         
         const data = response.data;
-        console.log("Recipe data:", data);
+        console.log("Recipe data received:", data);
         
         if (!data || Object.keys(data).length === 0) {
           throw new Error("Recipe data is empty");
@@ -116,52 +158,51 @@ const AboutRecipes = () => {
         
         const cleanSteps = parseSteps(data.steps);
 
-        // Handle video - construct URL without fetching
-        let videoInfo = {
-          title: "",
-          description: "",
-          hasVideo: false,
-          videoId: data.videoId
-        };
-
+        // Handle video
         if (data.videoId) {
-          videoInfo.hasVideo = true;
-          
-          // Set video metadata from the recipe data
-          if (data.video) {
-            videoInfo.title = data.video.title || `${data.recipeName} Video Tutorial`;
-            videoInfo.description = data.video.description || "Video tutorial for this recipe";
-          } else {
-            videoInfo.title = `${data.recipeName} Video Tutorial`;
-            videoInfo.description = "Watch how to make this delicious recipe step by step.";
-          }
-          
-          // IMPORTANT: We'll let the VideoPlayer handle authentication
-          // Don't include token in URL to avoid auth popup
           const videoStreamUrl = `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`;
           setVideoUrl(videoStreamUrl);
+          
+          if (data.video) {
+            setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
+            setVideoDescription(data.video.description || "Video tutorial for this recipe");
+          } else {
+            setVideoTitle(`${data.recipeName} Video Tutorial`);
+            setVideoDescription("Watch how to make this delicious recipe step by step.");
+          }
         }
 
         // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
-        setVideoTitle(videoInfo.title);
-        setVideoDescription(videoInfo.description);
 
-        // Load profile picture
-        if (data.profilePicture) {
-          loadProfilePicture(data.profilePicture);
+        // Fetch author's profile picture using userid
+        console.log("Recipe userid:", data.userid);
+        console.log("Recipe username:", data.username);
+        
+        if (data.userid) {
+          const userid = data.userid;
+          console.log(`Setting authorId to: ${userid}`);
+          setAuthorId(userid);
+          
+          // Try both endpoints to get profile picture
+          await Promise.all([
+            fetchUserData(userid),
+            fetchUserProfile(userid)
+          ]);
+        } else {
+          console.warn("Recipe has no userid, cannot fetch author profile");
         }
 
       } catch (err) {
         console.error("Recipe fetch error:", err);
         
         if (err.response) {
-          // Handle specific HTTP errors
           switch (err.response.status) {
             case 401:
               setError("Your session has expired. Please login again.");
               localStorage.removeItem("token");
               localStorage.removeItem("username");
+              localStorage.removeItem("userid");
               navigate("/login");
               break;
             case 403:
@@ -186,14 +227,13 @@ const AboutRecipes = () => {
     fetchRecipe();
   }, [id, token, navigate]);
 
-  // Custom VideoPlayer component with better error handling
+  // Custom VideoPlayer component
   const VideoPlayer = ({ src, title }) => {
     const videoRef = React.useRef(null);
     const [videoError, setVideoError] = React.useState(false);
     
     React.useEffect(() => {
       if (src && videoRef.current) {
-        // Clear any previous error
         setVideoError(false);
         videoRef.current.load();
       }
@@ -205,12 +245,11 @@ const AboutRecipes = () => {
     };
 
     const handleVideoLoadStart = () => {
-      // Set a timeout to show error if video takes too long to load
       setTimeout(() => {
         if (videoRef.current && videoRef.current.readyState === 0) {
           setVideoError(true);
         }
-      }, 5000); // 5 second timeout
+      }, 5000);
     };
 
     return (
@@ -256,7 +295,7 @@ const AboutRecipes = () => {
     );
   };
 
-  // Fetch comments for THIS recipe
+  // Fetch comments
   const fetchComments = async () => {
     if (!token || !id) return;
 
@@ -284,7 +323,6 @@ const AboutRecipes = () => {
 
       setCommentsList(sortedComments);
 
-      // Initialize likes for each comment
       const likesState = {};
       sortedComments.forEach(comment => {
         const commentId = comment.id || comment.commentId;
@@ -361,16 +399,14 @@ const AboutRecipes = () => {
         "/api/comments/c1/comment/like",
         { commentId, type }
       );
-      // Refresh comments to get updated counts
       fetchComments();
     } catch (err) {
       console.error("Like/Dislike failed:", err);
-      // Revert on error
       fetchComments();
     }
   };
 
-  // Post comment for THIS recipe
+  // Post comment
   const postComment = async () => {
     if (!comment.trim() || !token || postingComment || !id) {
       return;
@@ -395,7 +431,6 @@ const AboutRecipes = () => {
     } catch (err) {
       console.error("Failed to post comment:", err.response?.data || err.message);
       
-      // Try alternative method with query parameters if first fails
       try {
         await authAxios.post(
           `/api/comments/c1/comment`,
@@ -757,30 +792,69 @@ const AboutRecipes = () => {
           {/* Author Card */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center">
             <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white shadow">
-              <img
-                src={profilePictureUrl}
-                alt="Author"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.src = authorImg;
-                }}
-              />
+              {profileLoading ? (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                </div>
+              ) : profilePictureUrl ? (
+                <img
+                  src={profilePictureUrl}
+                  alt={authorData?.displayName || recipe?.username || "Author"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.log("Profile image failed to load");
+                    // Show placeholder when image fails
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `
+                      <div class="w-full h-full bg-green-100 flex items-center justify-center">
+                        <span class="font-bold text-green-700 text-xl">
+                          ${(recipe?.username || "A").charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    `;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-green-100 flex items-center justify-center">
+                  <span className="font-bold text-green-700 text-xl">
+                    {(recipe?.username || "A").charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
 
             <h3 className="font-bold text-lg mb-1">
-              Hi! I'm {recipe.username}
+              {authorData?.displayName || recipe?.username || "Unknown Author"}
             </h3>
 
             <p className="text-gray-700 text-sm mb-4">
-              Sharing delicious recipes with love and passion for cooking.
+              {authorData?.bio || "Sharing delicious recipes with love and passion for cooking."}
             </p>
 
+            {authorData && (
+              <div className="grid grid-cols-3 gap-2 mb-4 text-xs">
+                <div className="bg-white p-2 rounded-lg">
+                  <div className="font-bold text-green-600">{authorData.recipeCount || 0}</div>
+                  <div className="text-gray-500">Recipes</div>
+                </div>
+                <div className="bg-white p-2 rounded-lg">
+                  <div className="font-bold text-green-600">{authorData.followersCount || 0}</div>
+                  <div className="text-gray-500">Followers</div>
+                </div>
+                <div className="bg-white p-2 rounded-lg">
+                  <div className="font-bold text-green-600">{rating.toFixed(1)}</div>
+                  <div className="text-gray-500">Rating</div>
+                </div>
+              </div>
+            )}
+
             <button 
-              onClick={() => navigate(`/profile/${recipe.username}`)}
+              onClick={() => recipe?.username && navigate(`/profile/${recipe.username}`)}
               className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition"
             >
               View Profile
             </button>
+            
           </div>
 
           {/* Video Info Card */}
