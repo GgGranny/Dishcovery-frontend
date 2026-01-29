@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import { FaStar, FaRegStar, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
+
+// Import API functions
+import {
+  getRecipeById,
+  parseSteps,
+  getUserProfilePicture,
+  getUserData,
+  processProfilePicture,
+  getVideoStreamUrl,
+  getVideoMetadata,
+  getComments,
+  postComment,
+  reactToComment,
+  formatDate,
+  renderIngredients,
+  extractComments,
+  getSimilarRecipes,
+  processSimilarRecipes
+} from "../../api/Recipe";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -26,41 +44,53 @@ const AboutRecipes = () => {
   const [authorId, setAuthorId] = useState(null);
   const [authorData, setAuthorData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [similarRecipes, setSimilarRecipes] = useState([]);
+  const [loadingSimilarRecipes, setLoadingSimilarRecipes] = useState(false);
+  const [similarRecipesError, setSimilarRecipesError] = useState("");
 
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
 
-  // Create authenticated axios instance
-  const authAxios = axios.create({
-    baseURL: "http://localhost:8080",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
+  // Function to fetch similar recipes
+  const fetchSimilarRecipesData = async (recipeId) => {
+    if (!recipeId || !token) {
+      console.log("Cannot fetch similar recipes: no recipeId or token");
+      setSimilarRecipesError("Please login to view similar recipes");
+      return;
     }
-  });
 
-  const parseSteps = (steps) => {
-    let parsed = [];
+    setLoadingSimilarRecipes(true);
+    setSimilarRecipesError("");
+
     try {
-      if (Array.isArray(steps)) parsed = steps.flat().map(String);
-      else if (typeof steps === "string") parsed = steps.split(/\n|,/).map((s) => s.trim());
-      else if (typeof steps === "object" && steps !== null) parsed = Object.values(steps).flat().map(String);
+      const response = await getSimilarRecipes(recipeId);
+      const filteredRecipes = processSimilarRecipes(response, recipeId);
 
-      return parsed
-        .map((s) =>
-          s
-            .replace(/^\s*\d+[.)]\s*/, "")
-            .replace(/^\s*"|"\s*$/g, "")
-            .replace(/^\[/, "")
-            .replace(/\]$/, "")
-            .replace(/\\n/g, " ")
-            .trim()
-        )
-        .filter(Boolean)
-        .filter((s) => !/^\d+$/.test(s));
-    } catch (e) {
-      console.error("STEP PARSE ERROR:", e);
-      return [];
+      if (filteredRecipes.length === 0) {
+        setSimilarRecipesError("No similar recipes found for this recipe.");
+      }
+
+      setSimilarRecipes(filteredRecipes);
+    } catch (err) {
+      console.error("Failed to fetch similar recipes:", err);
+      if (err.response) {
+        if (err.response.status === 401) {
+          setSimilarRecipesError("Please login to view similar recipes");
+        } else if (err.response.status === 404) {
+          setSimilarRecipesError("Similar recipes feature not available");
+        } else if (err.response.status === 500) {
+          setSimilarRecipesError("Server error loading similar recipes");
+        } else {
+          setSimilarRecipesError(`Error ${err.response.status}: Unable to load similar recipes`);
+        }
+      } else if (err.request) {
+        setSimilarRecipesError("Network error. Please check your connection.");
+      } else {
+        setSimilarRecipesError("Unable to load similar recipes at the moment.");
+      }
+      setSimilarRecipes([]);
+    } finally {
+      setLoadingSimilarRecipes(false);
     }
   };
 
@@ -73,40 +103,17 @@ const AboutRecipes = () => {
 
     setProfileLoading(true);
     try {
-      console.log(`Fetching profile for userid: ${userid}`);
+      const response = await getUserProfilePicture(userid);
       
-      // Direct API call to your backend endpoint
-      const response = await authAxios.get(`/user/profile/${userid}`);
-      console.log("Profile API Response:", response.data);
-      
-      if (response.data && response.data.data && response.data.data !== "no user profile") {
-        const profileData = response.data.data;
-        
-        // Check what type of data we have
-        if (profileData.startsWith('data:image/')) {
-          // Already a data URL
-          console.log("Profile is data URL");
-          setProfilePictureUrl(profileData);
-        } else if (profileData.startsWith('http')) {
-          // External URL
-          console.log("Profile is external URL");
-          setProfilePictureUrl(profileData);
-        } else {
-          // Base64 data without prefix
-          console.log("Profile is base64 data");
-          setProfilePictureUrl(`data:image/jpeg;base64,${profileData}`);
-        }
+      if (response && response.data && response.data !== "no user profile") {
+        const pictureUrl = processProfilePicture(response.data);
+        setProfilePictureUrl(pictureUrl);
       } else {
         console.log("No profile picture found in database");
-        // Don't set any image - will show placeholder
         setProfilePictureUrl("");
       }
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
-      if (err.response) {
-        console.error("Error response:", err.response.data);
-        console.error("Error status:", err.response.status);
-      }
       setProfilePictureUrl("");
     } finally {
       setProfileLoading(false);
@@ -121,12 +128,9 @@ const AboutRecipes = () => {
     }
 
     try {
-      console.log(`Fetching user data for userid: ${userid}`);
-      const response = await authAxios.get(`/user/edit/${userid}`);
-      console.log("User data API Response:", response.data);
-      
-      if (response.data) {
-        setAuthorData(response.data);
+      const response = await getUserData(userid);
+      if (response) {
+        setAuthorData(response);
       } else {
         console.log("No user data received");
       }
@@ -146,11 +150,7 @@ const AboutRecipes = () => {
       }
 
       try {
-        console.log(`Fetching recipe with ID: ${id}`);
-        const response = await authAxios.get(`/api/recipes/recipe/r1/${id}`);
-        
-        const data = response.data;
-        console.log("Recipe data received:", data);
+        const data = await getRecipeById(id);
         
         if (!data || Object.keys(data).length === 0) {
           throw new Error("Recipe data is empty");
@@ -160,31 +160,24 @@ const AboutRecipes = () => {
 
         // Handle video
         if (data.videoId) {
-          const videoStreamUrl = `http://localhost:8080/api/v1/videos/stream/segment/${data.videoId}/master.m3u8`;
-          setVideoUrl(videoStreamUrl);
+          setVideoUrl(getVideoStreamUrl(data.videoId));
           
-          if (data.video) {
-            setVideoTitle(data.video.title || `${data.recipeName} Video Tutorial`);
-            setVideoDescription(data.video.description || "Video tutorial for this recipe");
-          } else {
-            setVideoTitle(`${data.recipeName} Video Tutorial`);
-            setVideoDescription("Watch how to make this delicious recipe step by step.");
-          }
+          const videoMetadata = getVideoMetadata(data.video, data.recipeName);
+          setVideoTitle(videoMetadata.title);
+          setVideoDescription(videoMetadata.description);
         }
 
         // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
 
+        // Fetch similar recipes
+        fetchSimilarRecipesData(id);
+
         // Fetch author's profile picture using userid
-        console.log("Recipe userid:", data.userid);
-        console.log("Recipe username:", data.username);
-        
         if (data.userid) {
           const userid = data.userid;
-          console.log(`Setting authorId to: ${userid}`);
           setAuthorId(userid);
           
-          // Try both endpoints to get profile picture
           await Promise.all([
             fetchUserData(userid),
             fetchUserProfile(userid)
@@ -300,22 +293,8 @@ const AboutRecipes = () => {
     if (!token || !id) return;
 
     try {
-      const res = await authAxios.get(`/api/comments/c1/comment/${id}`);
-
-      let commentsArray = [];
-
-      if (Array.isArray(res.data)) {
-        commentsArray = res.data;
-      } else if (res.data && Array.isArray(res.data.comments)) {
-        commentsArray = res.data.comments;
-      } else if (res.data && res.data.comment) {
-        commentsArray = [res.data.comment];
-      } else if (res.data && typeof res.data === 'object') {
-        const possibleArrays = Object.values(res.data).find(val => Array.isArray(val));
-        if (possibleArrays) {
-          commentsArray = possibleArrays;
-        }
-      }
+      const response = await getComments(id);
+      const commentsArray = extractComments(response);
 
       const sortedComments = commentsArray.sort((a, b) =>
         a.createdAt && b.createdAt ? new Date(b.createdAt) - new Date(a.createdAt) : 0
@@ -395,10 +374,7 @@ const AboutRecipes = () => {
     });
 
     try {
-      await authAxios.post(
-        "/api/comments/c1/comment/like",
-        { commentId, type }
-      );
+      await reactToComment(commentId, type);
       fetchComments();
     } catch (err) {
       console.error("Like/Dislike failed:", err);
@@ -407,78 +383,61 @@ const AboutRecipes = () => {
   };
 
   // Post comment
-  const postComment = async () => {
+  const handlePostComment = async () => {
     if (!comment.trim() || !token || postingComment || !id) {
       return;
     }
 
     setPostingComment(true);
     try {
-      const requestBody = {
-        recipeId: id,
-        content: comment.trim(),
-        username: username,
-      };
-
-      await authAxios.post(
-        `/api/comments/c1/comment`,
-        requestBody
-      );
-
+      await postComment(id, comment.trim(), username);
       setComment("");
       fetchComments();
-
     } catch (err) {
-      console.error("Failed to post comment:", err.response?.data || err.message);
+      console.error("Failed to post comment:", err);
       
-      try {
-        await authAxios.post(
-          `/api/comments/c1/comment`,
-          null,
-          {
-            params: {
-              recipeId: id,
-              content: comment.trim(),
-              username: username,
-            },
-          }
-        );
-
-        setComment("");
-        fetchComments();
-
-      } catch (secondErr) {
-        console.error("Second attempt also failed:", secondErr);
-        alert(`Failed to post comment. Please try again. Error: ${secondErr.message}`);
+      let errorMessage = "Failed to post comment. Please try again.";
+      
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "You need to be logged in to post comments.";
+          navigate("/login");
+        } else if (err.response.status === 400) {
+          errorMessage = "Invalid comment. Please check your input.";
+        } else if (err.response.status === 403) {
+          errorMessage = "You don't have permission to post comments.";
+        } else if (err.response.status === 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      } else if (err.request) {
+        errorMessage = "Network error. Please check your connection.";
       }
+      
+      alert(errorMessage);
     } finally {
       setPostingComment(false);
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "Just now";
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Recently";
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (e) {
-      return "Recently";
-    }
-  };
+  // Function to render star ratings for similar recipes
+  const renderSimilarRecipeStars = (rating = 0) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-  const renderIngredients = () => {
-    if (!recipe) return [];
-    if (Array.isArray(recipe.ingredients)) return recipe.ingredients;
-    if (typeof recipe.ingredients === "string")
-      return recipe.ingredients.split(/,|\n/).map((i) => i.trim()).filter(Boolean);
-    return ["No ingredients listed"];
+    return (
+      <div className="flex items-center">
+        {[...Array(fullStars)].map((_, i) => (
+          <FaStar key={`full-${i}`} className="w-3 h-3 text-yellow-400" />
+        ))}
+        {hasHalfStar && (
+          <FaStar className="w-3 h-3 text-yellow-400" />
+        )}
+        {[...Array(emptyStars)].map((_, i) => (
+          <FaRegStar key={`empty-${i}`} className="w-3 h-3 text-gray-300" />
+        ))}
+      </div>
+    );
   };
 
   const staticNutrients = {
@@ -493,6 +452,13 @@ const AboutRecipes = () => {
   const rating = 4.7;
   const reviews = 88;
   const totalStars = 5;
+
+  // Function to manually retry fetching similar recipes
+  const retrySimilarRecipes = () => {
+    if (recipe) {
+      fetchSimilarRecipesData(recipe.recipeId || recipe.id || id);
+    }
+  };
 
   if (loading)
     return (
@@ -596,7 +562,7 @@ const AboutRecipes = () => {
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Ingredients</h2>
                 <ul className="space-y-3">
-                  {renderIngredients().map((item, idx) => (
+                  {renderIngredients(recipe).map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <input type="checkbox" className="w-5 h-5 mt-0.5" />
                       <span className="text-gray-700">{item}</span>
@@ -705,7 +671,7 @@ const AboutRecipes = () => {
                     Logged in as: <span className="font-semibold">{username}</span>
                   </span>
                   <button
-                    onClick={postComment}
+                    onClick={handlePostComment}
                     disabled={!comment.trim() || postingComment}
                     className={`px-5 py-2 rounded-lg font-medium ${!comment.trim() || postingComment
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -857,33 +823,6 @@ const AboutRecipes = () => {
             
           </div>
 
-          {/* Video Info Card */}
-          {recipe.videoId && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h2 className="font-bold text-lg mb-4">Video Information</h2>
-              <div className="space-y-3">
-                {videoTitle && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Video Title</h3>
-                    <p className="font-semibold text-gray-800">{videoTitle}</p>
-                  </div>
-                )}
-                {videoDescription && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Video Description</h3>
-                    <p className="text-sm text-gray-600">{videoDescription}</p>
-                  </div>
-                )}
-                {recipe.video?.uploadedAt && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Upload Date</h3>
-                    <p className="text-sm text-gray-600">{new Date(recipe.video.uploadedAt).toLocaleDateString()}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Comment Stats */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h2 className="font-bold text-lg mb-4">Comment Activity</h2>
@@ -912,34 +851,86 @@ const AboutRecipes = () => {
           {/* Similar Recipes */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h2 className="font-bold text-lg mb-4">Similar Recipes</h2>
-            <div className="space-y-4">
-              {[1, 2, 3].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition group"
-                  onClick={() => navigate(`/recipes/${item}`)}
+            {loadingSimilarRecipes ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-3"></div>
+                <p className="text-gray-500 text-sm">Loading similar recipes...</p>
+              </div>
+            ) : similarRecipesError ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500 text-sm mb-3">{similarRecipesError}</p>
+                <button
+                  onClick={retrySimilarRecipes}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
                 >
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                      src={`https://source.unsplash.com/random/200x200?food=${item}`}
-                      alt={`Similar Recipe ${item}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-1 group-hover:text-green-600 transition">
-                      Delicious Recipe {item}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>30 mins</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <FaStar className="text-yellow-400" /> 4.5
-                      </span>
+                  Try Again
+                </button>
+              </div>
+            ) : similarRecipes.length > 0 ? (
+              <div className="space-y-4">
+                {similarRecipes.map((similarRecipe, index) => (
+                  <div
+                    key={similarRecipe.recipeId || similarRecipe.id || index}
+                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition group"
+                    onClick={() => navigate(`/aboutrecipes/${similarRecipe.recipeId || similarRecipe.id}`)}
+                  >
+                    <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                      {similarRecipe.thumbnail ? (
+                        <img
+                          src={`data:image/jpeg;base64,${similarRecipe.thumbnail}`}
+                          alt={similarRecipe.recipeName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition"
+                          onError={(e) => {
+                            e.target.src = "https://source.unsplash.com/random/200x200?food";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <GiKnifeFork className="text-gray-400 text-xl" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm mb-1 group-hover:text-green-600 transition line-clamp-1">
+                        {similarRecipe.recipeName || "Recipe Name"}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>{similarRecipe.cookTime || "30 mins"}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          {renderSimilarRecipeStars(similarRecipe.rating || 4.0)}
+                          <span className="ml-1">{similarRecipe.rating ? similarRecipe.rating.toFixed(1) : 4.0}</span>
+                        </span>
+                      </div>
+                      {similarRecipe.category && (
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-semibold rounded">
+                          {similarRecipe.category}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 text-sm">No similar recipes found.</p>
+                <button
+                  onClick={retrySimilarRecipes}
+                  className="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
+                >
+                  Search Again
+                </button>
+              </div>
+            )}
+            
+            {/* View All Recipes Button */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <button
+                onClick={() => navigate("/recipes")}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
+              >
+                View All Recipes
+              </button>
             </div>
           </div>
         </div>
