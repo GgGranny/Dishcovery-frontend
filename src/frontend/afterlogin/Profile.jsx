@@ -285,7 +285,7 @@ const Profile = () => {
               <p>📍 Kumaripati, Lalitpur</p>
               <p>📅 Joined 6/15/2023</p>
               <p className="text-green-600 underline cursor-pointer">
-                www.aryankitchen.com
+                www.{username}kitchen.com
               </p>
             </div>
 

@@ -4,12 +4,13 @@ import { HiCheck, HiStar, HiSparkles, HiFire, HiLockOpen, HiShieldCheck } from "
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import premiumImg from "../../assets/premium.png";
+import { esewaPayment } from "../../api/Payment"; // Adjust the import path as needed
 
 const PremiumPage = () => {
   const packages = [
     {
       name: "Basic",
-      price: "$0",
+      price: "Rs 0",
       period: "forever",
       features: [
         "Access to basic recipes",
@@ -19,10 +20,11 @@ const PremiumPage = () => {
       ],
       buttonText: "Current Plan",
       buttonClass: "bg-gray-200 text-gray-800 cursor-default",
+      amountInNPR: 0,
     },
     {
       name: "Pro",
-      price: "$4.99",
+      price: "Rs 650",
       period: "per month",
       features: [
         "All Basic features",
@@ -35,10 +37,11 @@ const PremiumPage = () => {
       buttonText: "Upgrade to Pro",
       buttonClass: "bg-green-600 hover:bg-green-700 text-white",
       popular: true,
+      amountInNPR: 650,
     },
     {
       name: "Ultimate",
-      price: "$9.99",
+      price: "Rs 1300",
       period: "per month",
       features: [
         "All Pro features",
@@ -51,8 +54,62 @@ const PremiumPage = () => {
       ],
       buttonText: "Get Ultimate",
       buttonClass: "bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white",
+      amountInNPR: 1300,
     },
   ];
+
+  const handlePlanSelect = async (pkg) => {
+    if (pkg.name === "Basic") return; // Skip for Basic plan
+
+    try {
+      const transaction_uuid = Math.round(Math.random() * 99999).toString();
+      const total_amount = pkg.amountInNPR;
+
+      // Get signature from backend
+      const data = {
+        total_amount,
+        transaction_uuid,
+        product_code: "EPAYTEST",
+      };
+
+      const response = await esewaPayment(data);
+      const { signature, signed_field_name } = response.data;
+
+      // Create eSewa payment form
+      const paymentData = {
+        amount: pkg.amountInNPR,
+        tax_amount: 0,
+        total_amount,
+        transaction_uuid,
+        product_code: "EPAYTEST",
+        product_service_charge: 0,
+        product_delivery_charge: 0,
+        success_url: "http://localhost:8080/api/payment/esewa/payment-success",
+        failure_url: "http://localhost:8080/api/payment/esewa/payment-failed",
+        signed_field_names: signed_field_name,
+        signature,
+      };
+
+      // Submit form to eSewa
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+
+      Object.entries(paymentData).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error) {
+      console.error("Failed to process payment", error);
+      alert("Payment failed. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,11 +153,10 @@ const PremiumPage = () => {
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span className="text-green-300 font-semibold">Trusted by 50,000+ Home Chefs</span>
             </div>
-            
 
             {/* CTA Button */}
-            <NavLink
-              to="/checkout"
+            <button
+              onClick={() => handlePlanSelect(packages[1])} // Pro plan
               className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white font-bold rounded-full text-base md:text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
             >
               <div className="relative">
@@ -108,7 +164,7 @@ const PremiumPage = () => {
                 <div className="absolute -inset-1 bg-yellow-300/20 blur-sm rounded-full group-hover:bg-yellow-300/30 transition-all duration-300"></div>
               </div>
               Start Your 7-Day Free Trial
-            </NavLink>
+            </button>
           </div>
         </div>
       </div>
@@ -186,14 +242,21 @@ const PremiumPage = () => {
                 ))}
               </ul>
               
-              <NavLink
-                to={pkg.name === "Basic" ? "#" : "/checkout"}
-                className={`block w-full py-3 rounded-full font-semibold text-center transition ${pkg.buttonClass} ${
-                  pkg.name !== "Basic" ? "hover:shadow-lg" : ""
-                }`}
-              >
-                {pkg.buttonText}
-              </NavLink>
+              {pkg.name === "Basic" ? (
+                <button
+                  className={`block w-full py-3 rounded-full font-semibold text-center transition ${pkg.buttonClass}`}
+                  disabled
+                >
+                  {pkg.buttonText}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handlePlanSelect(pkg)}
+                  className={`block w-full py-3 rounded-full font-semibold text-center transition ${pkg.buttonClass} hover:shadow-lg`}
+                >
+                  {pkg.buttonText}
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -230,13 +293,13 @@ const PremiumPage = () => {
             exclusive recipes, and advanced features.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <NavLink
-              to="/checkout"
+            <button
+              onClick={() => handlePlanSelect(packages[1])} // Pro plan
               className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-green-600 to-emerald-700 text-white font-bold hover:from-green-700 hover:to-emerald-800 transition shadow-xl hover:shadow-2xl hover:scale-105"
             >
               <HiSparkles />
               Start Your Premium Journey
-            </NavLink>
+            </button>
             <NavLink
               to="/homepage"
               className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-white text-gray-800 font-bold border border-gray-300 hover:border-green-500 transition hover:shadow-lg"
