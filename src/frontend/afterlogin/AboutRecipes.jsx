@@ -11,7 +11,6 @@ import {
   getRecipeById,
   parseSteps,
   getUserProfilePicture,
-  getUserData,
   processProfilePicture,
   getVideoStreamUrl,
   getVideoMetadata,
@@ -50,6 +49,17 @@ const AboutRecipes = () => {
 
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
+  const currentUserId = localStorage.getItem("userid");
+
+  // Helper function for fallback author data
+  const getFallbackAuthorData = (recipeData) => {
+    const authorName = recipeData?.username || "Recipe Author";
+    
+    return {
+      displayName: authorName,
+      bio: "Passionate about creating delicious and healthy recipes"
+    };
+  };
 
   // Function to fetch similar recipes
   const fetchSimilarRecipesData = async (recipeId) => {
@@ -94,7 +104,7 @@ const AboutRecipes = () => {
     }
   };
 
-  // Function to fetch user profile by userid
+  // Function to fetch user profile by userid - simplified without getUserData
   const fetchUserProfile = async (userid) => {
     if (!userid || !token) {
       console.log("No userid or token available");
@@ -110,32 +120,40 @@ const AboutRecipes = () => {
         setProfilePictureUrl(pictureUrl);
       } else {
         console.log("No profile picture found in database");
-        setProfilePictureUrl("");
+        setProfilePictureUrl(""); // Will show placeholder
       }
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
+      // Don't show error to user, just use placeholder
       setProfilePictureUrl("");
     } finally {
       setProfileLoading(false);
     }
   };
 
-  // Function to fetch user data by userid
-  const fetchUserData = async (userid) => {
-    if (!userid || !token) {
-      console.log("Cannot fetch user data: no userid or token");
-      return;
-    }
-
-    try {
-      const response = await getUserData(userid);
-      if (response) {
-        setAuthorData(response);
-      } else {
-        console.log("No user data received");
-      }
-    } catch (err) {
-      console.error("Failed to fetch user data:", err);
+  // SIMPLIFIED: Use recipe data directly for author info
+  const setupAuthorData = (recipeData) => {
+    if (!recipeData) return;
+    
+    // Create author data directly from recipe
+    const authorInfo = {
+      displayName: recipeData.username || "Recipe Author",
+      bio: "Food enthusiast sharing delicious recipes"
+    };
+    
+    setAuthorData(authorInfo);
+    
+    // Try to fetch profile picture if userid exists
+    if (recipeData.userid) {
+      setAuthorId(recipeData.userid);
+      fetchUserProfile(recipeData.userid).catch(err => {
+        console.log("Profile picture fetch optional, using placeholder:", err.message);
+      });
+    } else if (recipeData.userId) {
+      setAuthorId(recipeData.userId);
+      fetchUserProfile(recipeData.userId).catch(err => {
+        console.log("Profile picture fetch optional, using placeholder:", err.message);
+      });
     }
   };
 
@@ -170,21 +188,11 @@ const AboutRecipes = () => {
         // Set recipe data
         setRecipe({ ...data, steps: cleanSteps });
 
+        // Setup author data directly from recipe (NO API CALL)
+        setupAuthorData(data);
+
         // Fetch similar recipes
         fetchSimilarRecipesData(id);
-
-        // Fetch author's profile picture using userid
-        if (data.userid) {
-          const userid = data.userid;
-          setAuthorId(userid);
-          
-          await Promise.all([
-            fetchUserData(userid),
-            fetchUserProfile(userid)
-          ]);
-        } else {
-          console.warn("Recipe has no userid, cannot fetch author profile");
-        }
 
       } catch (err) {
         console.error("Recipe fetch error:", err);
@@ -457,6 +465,21 @@ const AboutRecipes = () => {
   const retrySimilarRecipes = () => {
     if (recipe) {
       fetchSimilarRecipesData(recipe.recipeId || recipe.id || id);
+    }
+  };
+
+  // Navigate to author profile if possible - CORRECTED VERSION
+  const navigateToAuthorProfile = () => {
+    // Use authorId if available, otherwise use recipe.userid
+    const profileId = authorId || recipe?.userid;
+    
+    if (profileId) {
+      navigate(`/userprofile/${profileId}`);
+    } else if (recipe?.username) {
+      // Fallback to username if userid not available
+      navigate(`/profile/username/${recipe.username}`);
+    } else {
+      alert("Author profile not available");
     }
   };
 
@@ -755,7 +778,7 @@ const AboutRecipes = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Author Card */}
+          {/* Author Card - SIMPLIFIED (No stats) */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center">
             <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white shadow">
               {profileLoading ? (
@@ -793,34 +816,16 @@ const AboutRecipes = () => {
               {authorData?.displayName || recipe?.username || "Unknown Author"}
             </h3>
 
-            <p className="text-gray-700 text-sm mb-4">
+            <p className="text-gray-700 text-sm mb-6">
               {authorData?.bio || "Sharing delicious recipes with love and passion for cooking."}
             </p>
 
-            {authorData && (
-              <div className="grid grid-cols-3 gap-2 mb-4 text-xs">
-                <div className="bg-white p-2 rounded-lg">
-                  <div className="font-bold text-green-600">{authorData.recipeCount || 0}</div>
-                  <div className="text-gray-500">Recipes</div>
-                </div>
-                <div className="bg-white p-2 rounded-lg">
-                  <div className="font-bold text-green-600">{authorData.followersCount || 0}</div>
-                  <div className="text-gray-500">Followers</div>
-                </div>
-                <div className="bg-white p-2 rounded-lg">
-                  <div className="font-bold text-green-600">{rating.toFixed(1)}</div>
-                  <div className="text-gray-500">Rating</div>
-                </div>
-              </div>
-            )}
-
             <button 
-              onClick={() => recipe?.username && navigate(`/profile/${recipe.username}`)}
+              onClick={navigateToAuthorProfile}
               className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition"
             >
-              View Profile
+              View Author's Profile
             </button>
-            
           </div>
 
           {/* Comment Stats */}

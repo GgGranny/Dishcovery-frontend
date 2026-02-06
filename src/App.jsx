@@ -79,6 +79,8 @@ import Chat from "./frontend/afterlogin/Chat";
 import CommunityChat from "./frontend/afterlogin/CommunityChat";
 import Pdf from "./frontend/Pdf";
 import PremiumPage from "./frontend/afterlogin/PremiumPage";
+import UserProfile from "./frontend/afterlogin/UserProfile";
+
 
 
 function App() {
@@ -109,6 +111,7 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/community/chat/:id" element={<CommunityChat />} />
           <Route path="/premium" element={<PremiumPage />} />
+          <Route path="/userprofile/:userId" element={<UserProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>

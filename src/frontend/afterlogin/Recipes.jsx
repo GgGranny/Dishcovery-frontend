@@ -13,6 +13,10 @@ const Recipes = () => {
   const [pageNo] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  
+  // State for saved recipes
+  const [savedRecipes, setSavedRecipes] = useState(new Set());
+  const [savingRecipeId, setSavingRecipeId] = useState(null);
 
   // Separate states for categories (Veg/Non-Veg) and cuisines (Newari, Tharu, etc.)
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -75,6 +79,9 @@ const Recipes = () => {
         console.log("Fetched recipes:", recipesArray);
         setRecipes(recipesArray);
         setFilteredRecipes(recipesArray);
+        
+        // Fetch saved recipes for current user
+        fetchSavedRecipes();
       } catch (err) {
         if (err.response && err.response.status === 401) {
           setError("Your session expired. Please log in again.");
@@ -90,11 +97,124 @@ const Recipes = () => {
     fetchRecipes();
   }, [token, pageNo]);
 
+  // Fetch saved recipes for current user
+  const fetchSavedRecipes = async () => {
+    if (!token) return;
+    
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/api/saved-recipes/user`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (res.data && Array.isArray(res.data)) {
+        const savedRecipeIds = res.data.map(item => item.recipeId || item.recipe?.recipeId).filter(id => id);
+        setSavedRecipes(new Set(savedRecipeIds));
+        console.log("Saved recipes:", savedRecipeIds);
+      }
+    } catch (err) {
+      console.error("Error fetching saved recipes:", err.response || err);
+      // If endpoint doesn't exist or fails, we'll handle it gracefully
+    }
+  };
+
+  // Handle save/unsave recipe
+  const handleSaveRecipe = async (recipeId, e) => {
+    e.stopPropagation(); // Prevent card click navigation
+    if (!token) {
+      setError("Please login to save recipes");
+      return;
+    }
+    
+    setSavingRecipeId(recipeId);
+    
+    try {
+      if (savedRecipes.has(recipeId)) {
+        // Unsave recipe
+        await axios.delete(
+          `http://localhost:8080/api/saved-recipes/${recipeId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setSavedRecipes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(recipeId);
+          return newSet;
+        });
+      } else {
+        // Save recipe
+        await axios.post(
+          `http://localhost:8080/api/saved-recipes/${recipeId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setSavedRecipes(prev => new Set(prev).add(recipeId));
+      }
+    } catch (err) {
+      console.error("Error saving/unsaving recipe:", err.response || err);
+      setError("Failed to save recipe. Please try again.");
+    } finally {
+      setSavingRecipeId(null);
+    }
+  };
+
+  // Apply filters to recipes
+  const applyFilters = useCallback(() => {
+    let filtered = [...recipes];
+
+    // Filter by category (Veg/Non-Veg)
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((recipe) =>
+        recipe.category && selectedCategories.includes(recipe.category)
+      );
+    }
+
+    // Filter by cuisine
+    if (selectedCuisines.length > 0) {
+      filtered = filtered.filter((recipe) => {
+        if (recipe.cuisine) {
+          return selectedCuisines.includes(recipe.cuisine);
+        }
+        if (recipe.category) {
+          return selectedCuisines.includes(recipe.category);
+        }
+        return false;
+      });
+    }
+
+    // Filter by difficulty
+    if (selectedDifficulty.length > 0) {
+      filtered = filtered.filter((recipe) =>
+        recipe.difficulty && selectedDifficulty.includes(recipe.difficulty)
+      );
+    }
+
+    setFilteredRecipes(filtered);
+  }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes]);
+
+  // Apply filters when filter states change
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      applyFilters();
+    }
+  }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes, searchQuery, applyFilters]);
+
   // Search recipes function
   const searchRecipes = async (query) => {
     if (!query.trim()) {
-      // If search query is empty, reset to all recipes
-      setFilteredRecipes(recipes);
+      // If search query is empty, reset to all recipes with filters
+      applyFilters();
       setIsSearching(false);
       return;
     }
@@ -162,60 +282,15 @@ const Recipes = () => {
     if (query.trim()) {
       debounceSearch(query);
     } else {
-      // If search query is cleared, reset to filtered recipes
+      // If search query is cleared, reset to all recipes with filters
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      setIsSearching(false);
       applyFilters();
     }
   };
-
-  // Apply filters to recipes
-  const applyFilters = useCallback(() => {
-    console.log("Selected Categories:", selectedCategories);
-    console.log("Selected Cuisines:", selectedCuisines);
-    console.log("Selected Difficulty:", selectedDifficulty);
-
-    let filtered = [...recipes];
-
-    // Filter by category (Veg/Non-Veg)
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter((recipe) =>
-        recipe.category && selectedCategories.includes(recipe.category)
-      );
-      console.log("After category filter:", filtered.length);
-    }
-
-    // Filter by cuisine
-    if (selectedCuisines.length > 0) {
-      filtered = filtered.filter((recipe) => {
-        // First check if recipe has cuisine property
-        if (recipe.cuisine) {
-          return selectedCuisines.includes(recipe.cuisine);
-        }
-        // If no cuisine property, check if category matches any cuisine
-        if (recipe.category) {
-          return selectedCuisines.includes(recipe.category);
-        }
-        return false;
-      });
-      console.log("After cuisine filter:", filtered.length);
-    }
-
-    // Filter by difficulty
-    if (selectedDifficulty.length > 0) {
-      filtered = filtered.filter((recipe) =>
-        recipe.difficulty && selectedDifficulty.includes(recipe.difficulty)
-      );
-      console.log("After difficulty filter:", filtered.length);
-    }
-
-    setFilteredRecipes(filtered);
-  }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes]);
-
-  // Apply filters when filter states change
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      applyFilters();
-    }
-  }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes, searchQuery, applyFilters]);
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -265,6 +340,13 @@ const Recipes = () => {
     setSelectedDifficulty([]);
     setSearchQuery("");
     setFilteredRecipes(recipes);
+    setIsSearching(false);
+    
+    // Clear any pending search timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
   };
 
   // Check if any filter is active
@@ -485,7 +567,7 @@ const Recipes = () => {
                   <button
                     onClick={() => {
                       setSearchQuery("");
-                      setFilteredRecipes(recipes);
+                      applyFilters();
                     }}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2"
                   >
@@ -549,11 +631,11 @@ const Recipes = () => {
               {filteredRecipes.map((recipe) => (
                 <div
                   key={recipe.recipeId}
-                  className="bg-white rounded-lg overflow-hidden border border-gray-400 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+                  className="bg-white rounded-lg overflow-hidden border border-gray-400 hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group"
                   onClick={() => navigate(`/aboutrecipes/${recipe.recipeId}`)}
                 >
-                  {/* Recipe Image */}
-                  <div className="h-40 w-full overflow-hidden">
+                  {/* Recipe Image with Heart Icon */}
+                  <div className="h-40 w-full overflow-hidden relative">
                     <img
                       src={
                         recipe.thumbnail
@@ -561,11 +643,52 @@ const Recipes = () => {
                           : "https://via.placeholder.com/300x200?text=No+Image"
                       }
                       alt={recipe.recipeName}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.src = "https://via.placeholder.com/300x200?text=No+Image";
                       }}
                     />
+                    
+                    {/* Heart Icon for Save/Unsave */}
+                    <button
+                      onClick={(e) => handleSaveRecipe(recipe.recipeId, e)}
+                      disabled={savingRecipeId === recipe.recipeId}
+                      className="absolute top-2 right-2 p-2 bg-white/90 rounded-full hover:bg-white transition-all duration-200 shadow-md hover:shadow-lg z-10"
+                      aria-label={savedRecipes.has(recipe.recipeId) ? "Remove from saved recipes" : "Save recipe"}
+                    >
+                      {savingRecipeId === recipe.recipeId ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      ) : savedRecipes.has(recipe.recipeId) ? (
+                        // Filled heart (saved)
+                        <svg 
+                          className="w-5 h-5 text-red-500" 
+                          fill="currentColor" 
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                      ) : (
+                        // Outline heart (not saved)
+                        <svg 
+                          className="w-5 h-5 text-gray-600 hover:text-red-500 transition-colors" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    
+                    {/* Gradient overlay at bottom for better text visibility */}
+                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
 
                   {/* Recipe Content */}
@@ -591,13 +714,26 @@ const Recipes = () => {
                     {/* Meta Information - Time, Difficulty, and Cuisine/Category tag */}
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                        <svg 
+                          className="w-3 h-3 mr-1" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
+                          />
+                        </svg>
                         <span className="font-medium">
                           {recipe.cookTime}
                         </span>
                         <span>•</span>
                         <span>{recipe.difficulty || "Easy"}</span>
                       </div>
-                      {/* Category/Cuisine tag moved to bottom right */}
+                      {/* Category/Cuisine tag */}
                       <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-semibold rounded">
                         {recipe.category || "Recipe"}
                       </span>
