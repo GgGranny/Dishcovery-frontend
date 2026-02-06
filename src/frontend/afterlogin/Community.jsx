@@ -16,10 +16,7 @@ import {
   FaChevronDown
 } from "react-icons/fa";
 import axios from "axios";
-import { fetchCommunity } from "../../api/Community";
-import { connect } from "../../api/WebSocket";
 import { useNavigate } from "react-router-dom";
-
 
 export default function Community() {
   let navigate = useNavigate();
@@ -35,11 +32,13 @@ export default function Community() {
   ]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [serverAllDiscussion, setServerAllDiscussion] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const [newDiscussion, setNewDiscussion] = useState({
-    communityName: "",
+    title: "",
     category: "",
     description: "",
     tags: ""
@@ -47,126 +46,63 @@ export default function Community() {
 
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
-  // Discussions state - in real app, this would come from API
-  const [discussions, setDiscussions] = useState({
-    recent: [{
-      id: 4,
-      category: "Trending",
-      time: "1 day ago",
-      title: "10 Most-Liked Dinner Recipes of the Week",
-      content: "These dinner ideas took the community by storm — quick, tasty, and healthy!",
-      author: "Community",
-      replies: 52,
-      likes: 148,
-      isLiked: true,
-      isBookmarked: false,
-      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Community",
-      tags: ["trending", "dinner", "recipes"],
-      categoryColor: "bg-red-200",
-      textColor: "text-red-700"
-    }, {
-      id: 4,
-      category: "Trending",
-      time: "1 day ago",
-      title: "10 Most-Liked Dinner Recipes of the Week",
-      content: "These dinner ideas took the community by storm — quick, tasty, and healthy!",
-      author: "Community",
-      replies: 52,
-      likes: 148,
-      isLiked: true,
-      isBookmarked: false,
-      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Community",
-      tags: ["trending", "dinner", "recipes"],
-      categoryColor: "bg-red-200",
-      textColor: "text-red-700"
-    }],
-    popular: [
-      {
-        id: 4,
-        category: "Trending",
-        time: "1 day ago",
-        title: "10 Most-Liked Dinner Recipes of the Week",
-        content: "These dinner ideas took the community by storm — quick, tasty, and healthy!",
-        author: "Community",
-        replies: 52,
-        likes: 148,
-        isLiked: true,
-        isBookmarked: false,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Community",
-        tags: ["trending", "dinner", "recipes"],
-        categoryColor: "bg-red-200",
-        textColor: "text-red-700"
-      },
-      {
-        id: 5,
-        category: "Hot Topic",
-        time: "2 days ago",
-        title: "Is Air Frying Actually Healthier?",
-        content: "Community members share research, comparisons, and honest opinions.",
-        author: "Alex Chen",
-        replies: 27,
-        likes: 93,
-        isLiked: false,
-        isBookmarked: true,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-        tags: ["air-fryer", "health", "debate"],
-        categoryColor: "bg-purple-200",
-        textColor: "text-purple-700"
-      }
-    ],
-    qa: [
-      {
-        id: 6,
-        category: "Question",
-        time: "3 hours ago",
-        title: "How do I stop pasta from sticking?",
-        content: "I always end up with clumps. Any professional tips?",
-        author: "Ravi",
-        replies: 12,
-        likes: 24,
-        isLiked: false,
-        isBookmarked: false,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ravi",
-        tags: ["pasta", "tips", "beginner"],
-        categoryColor: "bg-indigo-200",
-        textColor: "text-indigo-700"
-      },
-      {
-        id: 7,
-        category: "Question",
-        time: "5 hours ago",
-        title: "Why is my cake sinking in the middle?",
-        content: "Followed the recipe exactly, but still sinks. What am I doing wrong?",
-        author: "Meera",
-        replies: 19,
-        likes: 31,
-        isLiked: true,
-        isBookmarked: false,
-        authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Meera",
-        tags: ["baking", "cake", "problem"],
-        categoryColor: "bg-pink-200",
-        textColor: "text-pink-700"
-      }
-    ]
-  });
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await fetchCommunity();
-        setServerAllDiscussion(data);
+        setIsLoading(true);
+        setError(null);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please login to view community discussions');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await axios.get("http://localhost:8080/api/community", {
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        // Transform the data to match your component's expected format
+        const formattedData = response.data.map(discussion => ({
+          id: discussion.id,
+          title: discussion.communityName,
+          category: discussion.category || "General",
+          description: discussion.description,
+          username: discussion.username,
+          userId: discussion.userId,
+          createdAt: new Date(discussion.createdAt || discussion.creationDate || Date.now()).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          replies: 0, // You might need to fetch this from another endpoint
+          likes: 0, // You might need to fetch this from another endpoint
+          isLiked: false,
+          isBookmarked: false,
+          userProfile: `https://api.dicebear.com/7.x/avataaars/svg?seed=${discussion.username}`,
+          tags: discussion.tags || "",
+          isPrivate: discussion.isPrivate || false
+        }));
+        
+        setServerAllDiscussion(formattedData);
       } catch (e) {
-        console.error(e);
+        console.error("Error fetching community:", e);
+        setError(e.response?.data?.message || "Failed to load discussions");
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchData();
-  }, [])
+  }, []);
 
-  const [userDiscussions, setUserDiscussions] = useState([]);
   const username = localStorage.getItem("username") || "User";
   const userId = localStorage.getItem("userid") || 0;
 
-  // Handle creating new discussion
   const handleCreateDiscussion = async () => {
     if (!newDiscussion.title.trim() || !newDiscussion.description.trim()) {
       alert("Please fill in all required fields");
@@ -178,68 +114,86 @@ export default function Community() {
       return;
     }
 
-    // const tagsArray = newDiscussion.tags
-    //   .split(',')
-    //   .map(tag => tag.trim())
-    //   .filter(tag => tag.length > 0);
+    const tagsArray = newDiscussion.tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0);
 
     const newDiscussionObj = {
+      title: newDiscussion.title,
       category: categories.find(c => c.id === newDiscussion.category)?.name || "General",
-      communityName: newDiscussion.title,
       description: newDiscussion.description,
       username: username,
       userId: Number(userId),
       isPrivate: isPrivate,
-      tags: newDiscussion.tags,
+      tags: tagsArray.join(','),
+      createdAt: new Date().toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      replies: 0,
+      likes: 0,
+      isLiked: false,
+      isBookmarked: false,
+      userProfile: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
     };
+
     try {
-      console.log(newDiscussionObj);
-      const resposne = await axios.post("http://localhost:8080/api/community/create",
-        newDiscussionObj,
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("Please login to create a discussion");
+        return;
+      }
+
+      const response = await axios.post("http://localhost:8080/api/community/create",
+        {
+          communityName: newDiscussion.title,
+          description: newDiscussion.description,
+          username: username,
+          userId: Number(userId),
+          isPrivate: isPrivate,
+          tags: tagsArray.join(','),
+          category: categories.find(c => c.id === newDiscussion.category)?.name || "General"
+        },
         {
           headers: {
-            "Authorization": "Bearer " + localStorage.getItem("token"),
+            "Authorization": "Bearer " + token,
             "Content-type": "application/json"
           }
         }
       );
-      console.log(resposne.body);
+      
+      // Add the new discussion to the state
+      const createdDiscussion = {
+        ...newDiscussionObj,
+        id: response.data.id || Date.now(),
+      };
+      
+      setServerAllDiscussion(prev => [createdDiscussion, ...prev]);
+      
+      // Reset form
+      setNewDiscussion({
+        title: "",
+        category: "",
+        description: "",
+        tags: ""
+      });
+      setShowCategoryDropdown(false);
+      setShowCreateModal(false);
+      setIsPrivate(false);
+
+      alert("Discussion posted successfully!");
     } catch (e) {
-      console.error("failed to create community", e);
+      console.error("Failed to create community", e);
+      alert("Failed to post discussion. Please try again.");
     }
-
-    // // Add to recent discussions
-    // const updatedRecent = [newDiscussionObj, ...discussions.recent];
-    // setDiscussions(prev => ({
-    //   ...prev,
-    //   recent: updatedRecent
-    // }));
-
-    // // Add to user's discussions
-    // setUserDiscussions(prev => [newDiscussionObj, ...prev]);
-
-    // // Save to localStorage (for demo)
-    // const allDiscussions = JSON.parse(localStorage.getItem('communityDiscussions') || '[]');
-    // localStorage.setItem('communityDiscussions', JSON.stringify([newDiscussionObj, ...allDiscussions]));
-
-    // Reset form
-    setNewDiscussion({
-      title: "",
-      category: "",
-      description: "",
-      tags: ""
-    });
-    setShowCategoryDropdown(false);
-    setShowCreateModal(false);
-
-    alert("Discussion posted successfully!");
   };
 
-  // Handle like discussion
-  const handleLikeDiscussion = (tab, id) => {
-    setDiscussions(prev => ({
-      ...prev,
-      [tab]: prev[tab].map(discussion => {
+  const handleLikeDiscussion = (id) => {
+    setServerAllDiscussion(prev => 
+      prev.map(discussion => {
         if (discussion.id === id) {
           return {
             ...discussion,
@@ -249,14 +203,12 @@ export default function Community() {
         }
         return discussion;
       })
-    }));
+    );
   };
 
-  // Handle bookmark discussion
-  const handleBookmarkDiscussion = (tab, id) => {
-    setDiscussions(prev => ({
-      ...prev,
-      [tab]: prev[tab].map(discussion => {
+  const handleBookmarkDiscussion = (id) => {
+    setServerAllDiscussion(prev => 
+      prev.map(discussion => {
         if (discussion.id === id) {
           return {
             ...discussion,
@@ -265,40 +217,49 @@ export default function Community() {
         }
         return discussion;
       })
-    }));
+    );
   };
 
-  // Filter discussions by category
   const getFilteredDiscussions = () => {
-    if (selectedCategory === "all") return discussions[activeTab];
+    if (selectedCategory === "all") return serverAllDiscussion;
 
-    return discussions[activeTab].filter(discussion => {
-      const categoryName = categories.find(c => c.id === selectedCategory)?.name;
-      return discussion.category === categoryName;
-    });
+    const categoryName = categories.find(c => c.id === selectedCategory)?.name;
+    return serverAllDiscussion.filter(discussion => 
+      discussion.category === categoryName
+    );
   };
 
-  // const onMessageReceived = (messages, communityId) => {
-  //   console.log(messages);
-  // }
   const joinChatRoom = (communityId) => {
-    // connect(onMessageReceived, communityId);
     navigate(`/community/chat/${communityId}`);
-    console.log(communityId);
   }
 
+  const getCategoryColor = (category) => {
+    switch(category) {
+      case "Trending":
+      case "Hot Topic":
+        return { bg: "bg-red-200", text: "text-red-700" };
+      case "Cooking Tips":
+      case "Baking Tips":
+      case "Bread Making":
+        return { bg: "bg-yellow-200", text: "text-yellow-700" };
+      case "Recipe Requests":
+        return { bg: "bg-blue-200", text: "text-blue-700" };
+      case "Meal Planning":
+        return { bg: "bg-green-200", text: "text-green-700" };
+      case "Question":
+        return { bg: "bg-indigo-200", text: "text-indigo-700" };
+      default:
+        return { bg: "bg-gray-200", text: "text-gray-700" };
+    }
+  };
 
-  const filteredDiscussions = getFilteredDiscussions();
-
-  // Create Discussion Modal Component - Matching your design
   const CreateDiscussionModal = () => {
     if (!showCreateModal) return null;
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-auto">
-        <div className="bg-white rounded-xl max-w-xl w-full">
-          {/* Modal Header */}
-          <div className="p-6 border-b">
+        <div className="bg-white rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b sticky top-0 bg-white z-10">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-800">Start a New Discussion</h2>
               <button
@@ -310,9 +271,7 @@ export default function Community() {
             </div>
           </div>
 
-          {/* Modal Body */}
           <div className="p-6 space-y-6">
-            {/* Title Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Discussion title *
@@ -326,7 +285,6 @@ export default function Community() {
               />
             </div>
 
-            {/* Category Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category *
@@ -369,7 +327,6 @@ export default function Community() {
               </div>
             </div>
 
-            {/* Description Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Description *
@@ -383,7 +340,6 @@ export default function Community() {
               />
             </div>
 
-            {/* Tags Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tags
@@ -399,6 +355,7 @@ export default function Community() {
                 Add relevant tags to help others find your discussion
               </p>
             </div>
+            
             <div className="flex items-center gap-3">
               <label
                 htmlFor="privacy-toggle"
@@ -424,11 +381,19 @@ export default function Community() {
               </button>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-4">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewDiscussion({
+                    title: "",
+                    category: "",
+                    description: "",
+                    tags: ""
+                  });
+                  setIsPrivate(false);
+                }}
                 className="flex-1 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
               >
                 Cancel
@@ -442,77 +407,85 @@ export default function Community() {
               </button>
             </div>
           </div>
-        </div >
-      </div >
+        </div>
+      </div>
     );
   };
 
-  // Discussion Card Component
-  const DiscussionCard = ({ discussion, tab }) => (
-    <div className="bg-white p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start">
-        <div>
-          <span className={`${discussion.categoryColor} ${discussion.textColor} px-3 py-1 rounded-lg text-sm font-semibold`}>
-            {discussion.category}
-          </span>
-          <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
-            <FaClock size={12} /> {discussion.createdAt} • Posted by {discussion.username}
-          </p>
-        </div>
-        <img
-          src={discussion.userProfile}
-          alt={discussion.username}
-          className="w-10 h-10 rounded-full border"
-        />
-      </div>
-
-      <h3 className="text-xl font-semibold mt-3 hover:text-green-600 cursor-pointer">
-        {discussion.title}
-      </h3>
-      <p className="text-gray-600 mt-2">{discussion.content}</p>
-
-      {discussion.tags && discussion.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {/* {discussion.tags.map((tag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
-            >
-              #{tag}
+  const DiscussionCard = ({ discussion }) => {
+    const categoryColor = getCategoryColor(discussion.category);
+    
+    return (
+      <div className="bg-white p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+        <div className="flex justify-between items-start">
+          <div>
+            <span className={`${categoryColor.bg} ${categoryColor.text} px-3 py-1 rounded-lg text-sm font-semibold`}>
+              {discussion.category || "General"}
             </span>
-          ))} */}
-
-          #{discussion.tags}
+            <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
+              <FaClock size={12} /> {discussion.createdAt || "Just now"} • Posted by {discussion.username}
+            </p>
+          </div>
+          <img
+            src={discussion.userProfile || `https://api.dicebear.com/7.x/avataaars/svg?seed=${discussion.username}`}
+            alt={discussion.username}
+            className="w-10 h-10 rounded-full border"
+          />
         </div>
-      )}
 
-      <div className="flex justify-between items-center mt-4">
-        <div className="flex items-center gap-6 text-gray-700 text-sm">
-          <button
-            onClick={() => handleLikeDiscussion(tab, discussion.id)}
-            className={`flex items-center gap-2 ${discussion.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
+        <h3 className="text-xl font-semibold mt-3 hover:text-green-600 cursor-pointer">
+          {discussion.title || discussion.communityName}
+        </h3>
+        <p className="text-gray-600 mt-2">{discussion.description}</p>
+
+        {discussion.tags && discussion.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {discussion.tags.split(',').map((tag, index) => (
+              tag.trim() && (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
+                >
+                  #{tag.trim()}
+                </span>
+              )
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-6 text-gray-700 text-sm">
+            <button
+              onClick={() => handleLikeDiscussion(discussion.id)}
+              className={`flex items-center gap-2 ${discussion.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
+            >
+              <FaThumbsUp /> {discussion.likes || 0}
+            </button>
+            <button className="flex items-center gap-2 text-gray-500 hover:text-blue-500">
+              <FaComment /> {discussion.replies || 0}
+            </button>
+            <button
+              onClick={() => handleBookmarkDiscussion(discussion.id)}
+              className={`flex items-center gap-2 ${discussion.isBookmarked ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`}
+            >
+              <FaBookmark />
+            </button>
+            <button className="flex items-center gap-2 text-gray-500 hover:text-green-500">
+              <FaShare />
+            </button>
+          </div>
+          <button 
+            className="text-green-600 hover:text-green-800 font-medium text-sm" 
+            onClick={() => joinChatRoom(discussion.id)}
           >
-            <FaThumbsUp /> {discussion.likes}
-          </button>
-          <button className="flex items-center gap-2 text-gray-500 hover:text-blue-500">
-            <FaComment /> {discussion.replies}
-          </button>
-          <button
-            onClick={() => handleBookmarkDiscussion(tab, discussion.id)}
-            className={`flex items-center gap-2 ${discussion.isBookmarked ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`}
-          >
-            <FaBookmark />
-          </button>
-          <button className="flex items-center gap-2 text-gray-500 hover:text-green-500">
-            <FaShare />
+            Join Discussion →
           </button>
         </div>
-        <button className="text-green-600 hover:text-green-800 font-medium text-sm" onClick={() => joinChatRoom(discussion.id)}>
-          Join Discussion →
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const filteredDiscussions = getFilteredDiscussions();
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -528,7 +501,6 @@ export default function Community() {
           <h1 className="text-4xl font-bold mb-2">Community Discussions</h1>
           <p className="text-lg">Share, learn, and connect with fellow food enthusiasts</p>
 
-          {/* Create Discussion Button in Hero */}
           <button
             onClick={() => setShowCreateModal(true)}
             className="mt-6 px-6 py-3 bg-green-600 text-white rounded-xl shadow-lg hover:bg-green-700 transition flex items-center gap-2 font-semibold"
@@ -539,9 +511,9 @@ export default function Community() {
       </div>
 
       {/* Content */}
-      <div className="flex w-full max-w-7xl mx-auto mt-10 gap-6 px-4">
+      <div className="flex w-full max-w-7xl mx-auto mt-10 gap-6 px-4 flex-col lg:flex-row">
         {/* Sidebar */}
-        <aside className="w-64 bg-white p-5 rounded-2xl shadow-md h-fit">
+        <aside className="w-full lg:w-64 bg-white p-5 rounded-2xl shadow-md h-fit">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Categories</h2>
             <span className="text-sm text-gray-500">{filteredDiscussions.length} discussions</span>
@@ -563,26 +535,28 @@ export default function Community() {
             ))}
           </div>
 
-          {/* Quick Stats */}
           <div className="mt-8 pt-6 border-t">
             <h3 className="font-semibold text-gray-700 mb-3">Community Stats</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Discussions</span>
-                <span className="font-semibold">1,234</span>
+                <span className="font-semibold">{serverAllDiscussion.length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Active Users</span>
-                <span className="font-semibold">892</span>
+                <span className="font-semibold">
+                  {Array.from(new Set(serverAllDiscussion.map(d => d.userId))).length}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Your Discussions</span>
-                <span className="font-semibold text-green-600">{userDiscussions.length}</span>
+                <span className="font-semibold text-green-600">
+                  {serverAllDiscussion.filter(d => d.userId === Number(userId)).length}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Quick Create Button */}
           <button
             onClick={() => setShowCreateModal(true)}
             className="w-full mt-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
@@ -592,9 +566,8 @@ export default function Community() {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1">
-          {/* Header with Tabs and Create Button */}
-          <div className="flex justify-between items-center mb-6">
+        <div className="flex-1 lg:ml-6">
+          <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
             <div className="flex gap-6 text-lg font-medium">
               {[
                 { id: "recent", label: "Recent", icon: <FaClock /> },
@@ -623,14 +596,35 @@ export default function Community() {
             </button>
           </div>
 
-          {/* Tab Content */}
           <div className="space-y-6">
-            {serverAllDiscussion.length > 0 ? (
-              serverAllDiscussion.map((discussion) => (
+            {isLoading ? (
+              <div className="bg-white p-10 rounded-2xl shadow-md text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  Loading discussions...
+                </h3>
+              </div>
+            ) : error ? (
+              <div className="bg-white p-10 rounded-2xl shadow-md text-center">
+                <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  {error}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  Please login to view community discussions
+                </p>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition inline-flex items-center gap-2"
+                >
+                  Login
+                </button>
+              </div>
+            ) : filteredDiscussions.length > 0 ? (
+              filteredDiscussions.map((discussion) => (
                 <DiscussionCard
                   key={discussion.id}
                   discussion={discussion}
-                  tab={activeTab}
                 />
               ))
             ) : (
@@ -651,17 +645,17 @@ export default function Community() {
               </div>
             )}
 
-            {/* Load More Button */}
-            {filteredDiscussions.length > 0 && (
+            {filteredDiscussions.length > 0 && filteredDiscussions.length >= 10 && (
               <div className="flex justify-center mt-8">
-                <button className="px-8 py-3 bg-green-600 text-white rounded-xl shadow-md hover:bg-green-700 transition font-semibold">
+                <button 
+                  className="px-8 py-3 bg-green-600 text-white rounded-xl shadow-md hover:bg-green-700 transition font-semibold"
+                >
                   Load More Discussions
                 </button>
               </div>
             )}
           </div>
 
-          {/* Quick Tips Section */}
           <div className="mt-12 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">💡 Community Guidelines</h3>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">

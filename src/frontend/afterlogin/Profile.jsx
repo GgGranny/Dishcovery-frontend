@@ -38,7 +38,6 @@ const Profile = () => {
         setProfileImg(rs);
         return;
       }
-      console.log(rs);
       const img = await decodeImage(rs);
       setProfileImg(img);
     }

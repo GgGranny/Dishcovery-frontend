@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import logo from "../assets/logo.png";
 import { NavLink } from "react-router-dom";
-import { HiMenu, HiX, HiUser } from "react-icons/hi";
+import { HiMenu, HiX, HiUser, HiSparkles } from "react-icons/hi";
 import { decodeImage, fetchProfile } from "../api/Profile";
 
 const Homenavbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const userId = localStorage.getItem("userid");
-
   const [profileImg, setProfileImg] = useState("" || null);
-
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
@@ -56,19 +54,17 @@ const Homenavbar = () => {
   return (
     <header className="w-full bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center py-4 px-4">
-
         {/* LEFT: Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => window.scrollTo(0, 0)}
         >
           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="text-2xl font-bold text-gray-800">Discovery</span>
+          <span className="text-2xl font-bold text-gray-800">Dishcovery</span>
         </div>
 
         {/* CENTER NAV (Desktop) */}
         <nav className="hidden md:flex flex-1 justify-center gap-8">
-
           <NavLink
             to="/homepage"
             onClick={() => window.scrollTo(0, 0)}
@@ -88,16 +84,6 @@ const Homenavbar = () => {
           >
             Recipes
           </NavLink>
-          {/* 
-          <NavLink
-            to="/categories"
-            onClick={() => window.scrollTo(0, 0)}
-            className={({ isActive }) =>
-              isActive ? activeClass : "text-gray-700 hover:text-green-600"
-            }
-          >
-            Categories
-          </NavLink> */}
 
           <NavLink
             to="/community"
@@ -122,6 +108,22 @@ const Homenavbar = () => {
 
         {/* RIGHT (Desktop) */}
         <div className="hidden md:flex items-center gap-4 ml-auto">
+          {/* Premium Button - Updated to Green Premium Style */}
+          <NavLink
+            to="/premium"
+            onClick={() => window.scrollTo(0, 0)}
+            className="group flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden"
+          >
+            {/* Shiny effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            
+            {/* Gold-like border effect */}
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-300 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+            
+            <HiSparkles className="text-lg text-yellow-200 relative z-10" />
+            <span className="relative z-10 font-semibold">Premium</span>
+          </NavLink>
+
           <NavLink
             to="/uploadrecipes"
             onClick={() => window.scrollTo(0, 0)}
@@ -137,7 +139,11 @@ const Homenavbar = () => {
               className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden hover:shadow-sm transition"
             >
               {profileImg ? (
-                <img src={profileImg} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={profileImg}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <HiUser className="text-xl text-gray-700" />
               )}
@@ -145,7 +151,6 @@ const Homenavbar = () => {
 
             {profileOpen && (
               <div className="absolute right-0 mt-3 w-48 bg-white shadow-lg rounded-xl overflow-hidden border">
-
                 <NavLink
                   to="/profile"
                   onClick={() => window.scrollTo(0, 0)}
@@ -172,7 +177,7 @@ const Homenavbar = () => {
 
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50"
+                  className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 border-t"
                 >
                   Logout
                 </button>
@@ -193,7 +198,11 @@ const Homenavbar = () => {
               className="w-10 h-10 rounded-full flex items-center justify-center border bg-white overflow-hidden"
             >
               {profileImg ? (
-                <img src={profileImg} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={profileImg}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <HiUser className="text-lg text-gray-700" />
               )}
@@ -234,9 +243,23 @@ const Homenavbar = () => {
                   Saved Recipes
                 </NavLink>
 
+                <NavLink
+                  to="/premium"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.scrollTo(0, 0);
+                  }}
+                  className="block px-4 py-3 hover:bg-gray-100 border-t"
+                >
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    <HiSparkles className="text-emerald-500" />
+                    Premium Features
+                  </div>
+                </NavLink>
+
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50"
+                  className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 border-t"
                 >
                   Logout
                 </button>
@@ -260,14 +283,30 @@ const Homenavbar = () => {
       {/* MOBILE MENU */}
       {menuOpen && (
         <div>
-          <div className="flex items-center justify-between pt-4 border-t px-4">
+          <div className="flex items-center gap-3 pt-4 border-t px-4">
+            {/* Mobile Premium Button - Updated */}
+            <NavLink
+              to="/premium"
+              onClick={() => {
+                setMenuOpen(false);
+                window.scrollTo(0, 0);
+              }}
+              className="group flex items-center gap-2 flex-1 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-medium shadow-lg justify-center relative overflow-hidden"
+            >
+              {/* Shiny effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              <HiSparkles className="text-lg text-yellow-200 relative z-10" />
+              <span className="relative z-10 font-semibold">Premium</span>
+            </NavLink>
+
             <NavLink
               to="/uploadrecipes"
               onClick={() => {
                 setMenuOpen(false);
                 window.scrollTo(0, 0);
               }}
-              className="px-4 py-2 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition"
+              className="flex-1 px-4 py-3 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition text-center"
             >
               Create
             </NavLink>
@@ -275,7 +314,6 @@ const Homenavbar = () => {
 
           <div className="md:hidden bg-white shadow-lg p-6 space-y-4">
             <div className="flex flex-col gap-3 text-lg">
-
               <NavLink
                 to="/homepage"
                 onClick={() => {
@@ -302,19 +340,6 @@ const Homenavbar = () => {
                 Recipes
               </NavLink>
 
-              {/* <NavLink
-                to="/categories"
-                onClick={() => {
-                  setMenuOpen(false);
-                  window.scrollTo(0, 0);
-                }}
-                className={({ isActive }) =>
-                  isActive ? activeClass : "text-gray-700"
-                }
-              >
-                Categories
-              </NavLink> */}
-
               <NavLink
                 to="/community"
                 onClick={() => {
@@ -340,7 +365,6 @@ const Homenavbar = () => {
               >
                 About
               </NavLink>
-
             </div>
           </div>
         </div>

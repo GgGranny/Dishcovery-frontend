@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
@@ -11,6 +11,8 @@ const Recipes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pageNo] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   // Separate states for categories (Veg/Non-Veg) and cuisines (Newari, Tharu, etc.)
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -19,6 +21,7 @@ const Recipes = () => {
 
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+  const searchTimeoutRef = useRef(null);
 
   // Fixed cuisine list
   const CUISINE_LIST = [
@@ -49,7 +52,7 @@ const Recipes = () => {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${11}`,
+          `http://localhost:8080/api/recipes/recipe?page=${pageNo}&size=${10}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -87,8 +90,85 @@ const Recipes = () => {
     fetchRecipes();
   }, [token, pageNo]);
 
-  // Apply filters
-  useEffect(() => {
+  // Search recipes function
+  const searchRecipes = async (query) => {
+    if (!query.trim()) {
+      // If search query is empty, reset to all recipes
+      setFilteredRecipes(recipes);
+      setIsSearching(false);
+      return;
+    }
+
+    if (!token) {
+      setError("You are not logged in.");
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/api/recipes/search?search=${encodeURIComponent(query)}&page=1&size=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      let searchResults = [];
+      if (Array.isArray(res.data)) {
+        searchResults = res.data;
+      } else if (res.data.content) {
+        searchResults = res.data.content;
+      } else if (res.data.recipes) {
+        searchResults = res.data.recipes;
+      } else {
+        searchResults = [res.data];
+      }
+
+      console.log("Search results:", searchResults);
+      setFilteredRecipes(searchResults);
+      setError(""); // Clear any previous errors
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        setError("Your session expired. Please log in again.");
+      } else {
+        setError("Failed to search recipes.");
+      }
+      console.error("Error searching recipes:", err.response || err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Custom debounce function
+  const debounceSearch = useCallback((query) => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout
+    searchTimeoutRef.current = setTimeout(() => {
+      searchRecipes(query);
+    }, 500); // 500ms delay
+  }, []);
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.trim()) {
+      debounceSearch(query);
+    } else {
+      // If search query is cleared, reset to filtered recipes
+      applyFilters();
+    }
+  };
+
+  // Apply filters to recipes
+  const applyFilters = useCallback(() => {
     console.log("Selected Categories:", selectedCategories);
     console.log("Selected Cuisines:", selectedCuisines);
     console.log("Selected Difficulty:", selectedDifficulty);
@@ -130,6 +210,22 @@ const Recipes = () => {
     setFilteredRecipes(filtered);
   }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes]);
 
+  // Apply filters when filter states change
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      applyFilters();
+    }
+  }, [selectedCategories, selectedCuisines, selectedDifficulty, recipes, searchQuery, applyFilters]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Handle category selection
   const handleCategoryChange = (category) => {
     setSelectedCategories(prev => {
@@ -167,12 +263,15 @@ const Recipes = () => {
     setSelectedCategories([]);
     setSelectedCuisines([]);
     setSelectedDifficulty([]);
+    setSearchQuery("");
+    setFilteredRecipes(recipes);
   };
 
   // Check if any filter is active
   const isFilterActive = selectedCategories.length > 0 ||
     selectedCuisines.length > 0 ||
-    selectedDifficulty.length > 0;
+    selectedDifficulty.length > 0 ||
+    searchQuery.trim() !== "";
 
   // Function to render star ratings
   const renderStars = (rating = 0) => {
@@ -239,6 +338,11 @@ const Recipes = () => {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
+                {searchQuery.trim() !== "" && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    Search: "{searchQuery}"
+                  </span>
+                )}
                 {selectedCategories.map(cat => (
                   <span key={cat} className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                     {cat}
@@ -328,18 +432,80 @@ const Recipes = () => {
 
         {/* Recipe Cards */}
         <div className="col-span-9">
-          {/* Header with count */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">
-              {isFilterActive
-                ? `Filtered Recipes (${filteredRecipes.length})`
-                : "All Recipes"}
-            </h2>
-            <span className="text-sm text-gray-500">
-              {isFilterActive
-                ? `Showing ${filteredRecipes.length} of ${recipes.length} recipes`
-                : `Total ${recipes.length} recipes`}
-            </span>
+          {/* Header with count and search bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                {searchQuery.trim() !== "" 
+                  ? `Search Results for "${searchQuery}"`
+                  : isFilterActive
+                  ? `Filtered Recipes (${filteredRecipes.length})`
+                  : "All Recipes"}
+              </h2>
+              <span className="text-sm text-gray-500">
+                {searchQuery.trim() !== ""
+                  ? `Found ${filteredRecipes.length} recipes`
+                  : isFilterActive
+                  ? `Showing ${filteredRecipes.length} of ${recipes.length} recipes`
+                  : `Total ${recipes.length} recipes`}
+              </span>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search recipes by name..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full px-4 py-2.5 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg 
+                    className="w-4 h-4 text-gray-400" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                    />
+                  </svg>
+                </div>
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                  </div>
+                )}
+                {searchQuery && !isSearching && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilteredRecipes(recipes);
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <svg 
+                      className="w-4 h-4 text-gray-400 hover:text-gray-600" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M6 18L18 6M6 6l12 12" 
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -363,7 +529,9 @@ const Recipes = () => {
             <div className="text-center mt-10 p-8 bg-gray-50 rounded-xl">
               <p className="text-gray-600 text-lg mb-2">No recipes found</p>
               <p className="text-gray-500 text-sm mb-4">
-                {isFilterActive
+                {searchQuery.trim() !== ""
+                  ? `No recipes found for "${searchQuery}"`
+                  : isFilterActive
                   ? "No recipes match your selected filters"
                   : "No recipes available yet"}
               </p>
@@ -372,7 +540,7 @@ const Recipes = () => {
                   onClick={resetFilters}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
-                  Clear Filters
+                  {searchQuery.trim() !== "" ? "Clear Search" : "Clear Filters"}
                 </button>
               )}
             </div>
