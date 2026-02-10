@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import { FaHeart, FaBookmark, FaRegComment, FaRegPlusSquare } from "react-icons/fa";
@@ -8,10 +8,12 @@ import { decodeImage, fetchProfile } from "../../api/Profile";
 import { IoPerson } from "react-icons/io5";
 
 const UserProfile = () => {
-  const { userId } = useParams(); // Get userId from URL params
+  const { userId, username: urlUsername } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const currentUserId = localStorage.getItem("userid");
+  const currentUsername = localStorage.getItem("username");
   const token = localStorage.getItem("token");
   const [isOwnProfile, setIsOwnProfile] = useState(false);
 
@@ -32,6 +34,14 @@ const UserProfile = () => {
   const [savedRecipes, setSavedRecipes] = useState([]);
   const [likedRecipes, setLikedRecipes] = useState([]);
 
+  // Set initial username from URL if available
+  useEffect(() => {
+    if (urlUsername) {
+      const decodedUsername = decodeURIComponent(urlUsername);
+      setUsername(decodedUsername);
+    }
+  }, [urlUsername]);
+
   // Check if this is the current user's own profile
   useEffect(() => {
     if (userId && currentUserId) {
@@ -50,17 +60,50 @@ const UserProfile = () => {
 
       setLoading(true);
       try {
-        // Fetch user's profile image
+        // Fetch user's profile image using userId
         const rs = await fetchProfile(userId);
         if (rs.startsWith("https://")) {
           setProfileImg(rs);
         } else if (rs && rs !== "no user profile") {
           const img = await decodeImage(rs);
           setProfileImg(img);
+        } else {
+          // Set a default placeholder if no image
+          setProfileImg(null);
         }
 
-        // Fetch user's basic info (you might need to create this endpoint)
-        // For now, we'll fetch recipes to get username
+        // Fetch user's basic info
+        try {
+          const userRes = await axios.get(
+            `http://localhost:8080/api/users/${userId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          
+          const userInfo = userRes.data;
+          console.log("User info fetched:", userInfo);
+          
+          if (userInfo) {
+            // Set username from API response (more reliable)
+            const apiUsername = userInfo.username || urlUsername;
+            setUsername(apiUsername);
+            
+            setUserData({
+              bio: userInfo.bio || "Passionate cook sharing delicious recipes with the community.",
+              location: userInfo.location || "Location not specified",
+              joinDate: userInfo.createdAt ? new Date(userInfo.createdAt).toLocaleDateString() : "Recently",
+              followers: userInfo.followers || 0,
+              following: userInfo.following || 0,
+              email: userInfo.email || "",
+            });
+          }
+        } catch (userErr) {
+          console.log("User info endpoint not available, using fallback:", userErr.message);
+          // Keep using URL username if API fails
+        }
+
+        // Fetch user's recipes
         const res = await axios.get(
           `http://localhost:8080/api/recipes/user/r1/${userId}`,
           {
@@ -71,53 +114,67 @@ const UserProfile = () => {
         const data = await res.data;
         const recipesData = Array.isArray(data) ? data : [data];
         
-        // Extract username from first recipe (if available)
-        if (recipesData.length > 0 && recipesData[0].username) {
+        // Extract username from first recipe if not already set
+        if (recipesData.length > 0 && recipesData[0].username && !username) {
           setUsername(recipesData[0].username);
-        } else {
-          // Fallback to fetching user info from a separate endpoint
-          try {
-            const userRes = await axios.get(
-              `http://localhost:8080/api/users/${userId}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
-            if (userRes.data && userRes.data.username) {
-              setUsername(userRes.data.username);
-            }
-          } catch (userErr) {
-            console.log("User info endpoint not available, using fallback");
-            setUsername(`User${userId.slice(0, 4)}`);
-          }
         }
 
         setRecipes(recipesData);
         setCounts(prev => ({ ...prev, recipes: recipesData.length }));
 
-        // For demo, using localStorage for saved/liked (in real app, fetch from API)
-        const savedData = JSON.parse(localStorage.getItem("savedRecipes") || "[]");
-        const likedData = JSON.parse(localStorage.getItem("likedRecipes") || "[]");
+        // Fetch saved recipes from API
+        try {
+          const savedRes = await axios.get(
+            `http://localhost:8080/api/users/${userId}/saved-recipes`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (savedRes.data) {
+            setSavedRecipes(savedRes.data);
+            setCounts(prev => ({ ...prev, saved: savedRes.data.length }));
+          }
+        } catch (savedErr) {
+          console.log("Saved recipes endpoint not available, using localStorage");
+          const savedData = JSON.parse(localStorage.getItem("savedRecipes") || "[]");
+          setSavedRecipes(savedData);
+          setCounts(prev => ({ ...prev, saved: savedData.length }));
+        }
 
-        setSavedRecipes(savedData.slice(0, 6)); // Limit to 6 for display
-        setLikedRecipes(likedData.slice(0, 6)); // Limit to 6 for display
-        
-        setCounts(prev => ({
-          ...prev,
-          saved: savedData.length,
-          liked: likedData.length,
-        }));
+        // Fetch liked recipes from API
+        try {
+          const likedRes = await axios.get(
+            `http://localhost:8080/api/users/${userId}/liked-recipes`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (likedRes.data) {
+            setLikedRecipes(likedRes.data);
+            setCounts(prev => ({ ...prev, liked: likedRes.data.length }));
+          }
+        } catch (likedErr) {
+          console.log("Liked recipes endpoint not available, using localStorage");
+          const likedData = JSON.parse(localStorage.getItem("likedRecipes") || "[]");
+          setLikedRecipes(likedData);
+          setCounts(prev => ({ ...prev, liked: likedData.length }));
+        }
 
       } catch (err) {
         console.error("Error fetching user profile:", err);
         setError("Failed to load user profile");
+        
+        // Use URL username as fallback
+        if (urlUsername) {
+          setUsername(decodeURIComponent(urlUsername));
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [userId, token]);
+  }, [userId, token, urlUsername]);
 
   const renderStars = (rating = 4) => {
     const fullStars = Math.floor(rating);
@@ -140,7 +197,7 @@ const UserProfile = () => {
   const renderCard = (recipe, showCategory = true) => (
     <div
       key={recipe.recipeId || recipe.id || Math.random()}
-      className="bg-white rounded-lg overflow-hidden border border-gray-300 hover:shadow-lg cursor-pointer transition"
+      className="bg-white rounded-lg overflow-hidden border border-gray-300 hover:shadow-lg cursor-pointer transition min-h-[200px]"
       onClick={() => navigate(`/aboutrecipes/${recipe.recipeId || recipe.id}`)}
     >
       <div className="h-40 w-full overflow-hidden">
@@ -183,8 +240,20 @@ const UserProfile = () => {
   );
 
   const renderTabContent = () => {
-    if (loading) return <p className="mt-6 text-gray-500">Loading...</p>;
-    if (error) return <p className="mt-6 text-red-500">{error}</p>;
+    if (loading) return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+    
+    if (error) return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
 
     const dataMap = {
       recipes: recipes,
@@ -196,7 +265,7 @@ const UserProfile = () => {
     
     if (!data || data.length === 0) {
       return (
-        <div className="mt-6 text-center py-12 bg-gray-50 rounded-lg">
+        <div className="mt-6 text-center py-12 bg-gray-50 rounded-lg min-h-[400px] flex items-center justify-center">
           <p className="text-gray-500 italic">
             {activeTab === "recipes" 
               ? "This user hasn't posted any recipes yet."
@@ -208,6 +277,27 @@ const UserProfile = () => {
       );
     }
 
+    // Handle single recipe - center it
+    if (data.length === 1) {
+      return (
+        <div className="flex justify-center items-start pt-10">
+          <div className="w-full max-w-sm">
+            {renderCard(data[0], activeTab === "recipes")}
+          </div>
+        </div>
+      );
+    }
+
+    // Handle 2 recipes - use 2-column grid
+    if (data.length === 2) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+          {data.map((item) => renderCard(item, activeTab === "recipes"))}
+        </div>
+      );
+    }
+
+    // Handle 3 or more recipes - use 3-column grid
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
         {data.map((item) => renderCard(item, activeTab === "recipes"))}
@@ -218,6 +308,35 @@ const UserProfile = () => {
   // Go back to own profile if this is the current user
   const handleViewOwnProfile = () => {
     navigate("/profile");
+  };
+
+  // Edit profile function
+  const handleEditProfile = () => {
+    navigate(`/edit-profile/${userId}`);
+  };
+
+  // Handle follow/unfollow
+  const handleFollow = () => {
+    if (!token) {
+      alert("Please login to follow users");
+      navigate("/login");
+      return;
+    }
+    
+    // Implement follow functionality here
+    alert(`Follow functionality for ${username} would be implemented here`);
+  };
+
+  // Handle share recipe
+  const handleShareRecipe = () => {
+    if (isOwnProfile) {
+      navigate("/create-recipe");
+    } else {
+      // Share this user's profile
+      const url = window.location.href;
+      navigator.clipboard.writeText(url);
+      alert("Profile link copied to clipboard!");
+    }
   };
 
   if (loading) {
@@ -239,73 +358,109 @@ const UserProfile = () => {
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       <Homenavbar />
 
-      <div className="max-w-6xl mx-auto mt-10 px-5 mb-20">
+      <div className="max-w-6xl mx-auto mt-10 px-5 mb-20 w-full">
         {/* Profile Header */}
-        <div className="flex items-start gap-6">
-          <div className="relative w-28 h-28">
-            {profileImg ? (
-              <img
-                src={profileImg}
-                alt="Profile"
-                className="w-28 h-28 rounded-full border object-cover"
-              />
-            ) : (
-              <div className="w-28 h-28 rounded-full bg-green-100 border border-green-200 flex items-center justify-center">
-                <IoPerson className="text-green-600 text-4xl" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">@{username}</p>
-                <h1 className="text-2xl font-semibold">{username}</h1>
-              </div>
-              
-              {isOwnProfile && (
-                <button 
-                  onClick={handleViewOwnProfile}
-                  className="px-6 py-2 border border-green-500 text-green-600 rounded-xl hover:bg-green-50 transition"
-                >
-                  View My Full Profile
-                </button>
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="flex-shrink-0">
+            <div className="relative w-28 h-28 mx-auto sm:mx-0">
+              {profileImg ? (
+                <img
+                  src={profileImg}
+                  alt="Profile"
+                  className="w-28 h-28 rounded-full border object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full bg-green-100 border border-green-200 flex items-center justify-center">
+                  <IoPerson className="text-green-600 text-4xl" />
+                </div>
               )}
             </div>
+          </div>
 
-            <p className="mt-3 leading-relaxed text-sm text-gray-700">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-500 text-sm truncate">@{username}</p>
+                <h1 className="text-2xl font-semibold truncate">{username}</h1>
+                {userData?.email && (
+                  <p className="text-sm text-gray-600 mt-1 truncate">{userData.email}</p>
+                )}
+              </div>
+              
+              <div className="flex gap-3 flex-shrink-0">
+                {isOwnProfile ? (
+                  <>
+                    <button 
+                      onClick={handleEditProfile}
+                      className="px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition text-sm sm:text-base whitespace-nowrap"
+                    >
+                      Edit Profile
+                    </button>
+                    <button 
+                      onClick={handleViewOwnProfile}
+                      className="px-4 sm:px-6 py-2 border border-green-500 text-green-600 rounded-xl hover:bg-green-50 transition text-sm sm:text-base whitespace-nowrap"
+                    >
+                      My Profile
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={handleFollow}
+                    className="px-4 sm:px-6 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition text-sm sm:text-base whitespace-nowrap"
+                  >
+                    Follow
+                  </button>
+                )}
+                <button 
+                  onClick={handleShareRecipe}
+                  className="px-4 sm:px-6 py-2 border border-green-500 text-green-600 rounded-xl hover:bg-green-50 transition text-sm sm:text-base whitespace-nowrap"
+                >
+                  {isOwnProfile ? "📤 Share Recipe" : "📤 Share Profile"}
+                </button>
+              </div>
+            </div>
+
+            <p className="mt-3 leading-relaxed text-sm text-gray-700 line-clamp-3">
               {userData?.bio || "Passionate cook sharing delicious recipes with the community."}
             </p>
 
-            <div className="flex items-center gap-6 mt-4 text-sm text-gray-600">
-              <p>📍 {userData?.location || "Location not specified"}</p>
-              <p>📅 Joined {userData?.joinDate || "Recently"}</p>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-4 text-sm text-gray-600">
+              <p className="flex items-center gap-1">
+                📍 {userData?.location || "Location not specified"}
+              </p>
+              <p className="flex items-center gap-1">
+                📅 Joined {userData?.joinDate || "Recently"}
+              </p>
             </div>
 
-            <div className="flex gap-10 mt-4 font-semibold">
-              <p>
-                <span className="text-lg">{counts.recipes}</span> Recipes
+            <div className="flex flex-wrap gap-6 sm:gap-10 mt-4 font-semibold">
+              <p className="flex flex-col sm:flex-row items-center sm:items-start gap-1">
+                <span className="text-lg">{counts.recipes}</span>
+                <span className="text-sm text-gray-600">Recipes</span>
               </p>
-              <p>
-                <span className="text-lg">{userData?.followers || 0}</span> Followers
+              <p className="flex flex-col sm:flex-row items-center sm:items-start gap-1">
+                <span className="text-lg">{userData?.followers || 0}</span>
+                <span className="text-sm text-gray-600">Followers</span>
               </p>
-              <p>
-                <span className="text-lg">{userData?.following || 0}</span> Following
+              <p className="flex flex-col sm:flex-row items-center sm:items-start gap-1">
+                <span className="text-lg">{userData?.following || 0}</span>
+                <span className="text-sm text-gray-600">Following</span>
               </p>
-              <p>
-                <span className="text-lg">{counts.liked}</span> Likes
+              <p className="flex flex-col sm:flex-row items-center sm:items-start gap-1">
+                <span className="text-lg">{counts.liked}</span>
+                <span className="text-sm text-gray-600">Likes</span>
               </p>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="mt-8 border-b flex gap-8 text-sm">
+        <div className="mt-8 border-b flex gap-4 sm:gap-8 text-sm overflow-x-auto">
           {["recipes", "saved", "liked"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 flex items-center gap-1 ${activeTab === tab
+              className={`pb-2 flex items-center gap-1 flex-shrink-0 ${activeTab === tab
                 ? "border-b-2 border-green-500 text-green-600 font-medium"
                 : "text-gray-500"
                 }`}
