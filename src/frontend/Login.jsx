@@ -13,6 +13,12 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  // Admin credentials
+  const ADMIN_CREDENTIALS = {
+    username: "admin@gmail.com",
+    password: "admin123"
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -24,6 +30,26 @@ const Login = () => {
     const { username, password } = formData;
     if (!username || !password) {
       alert("Please enter both username and password.");
+      return;
+    }
+
+    // Check for admin credentials
+    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+      // Admin login
+      setIsLoading(true);
+      
+      // Simulate API delay
+      setTimeout(() => {
+        // Store admin data in localStorage
+        localStorage.setItem("token", "admin_token");
+        localStorage.setItem("refreshToken", "admin_refresh_token");
+        localStorage.setItem("userid", "admin_001");
+        localStorage.setItem("username", "Admin");
+        localStorage.setItem("role", "admin"); // Add role for admin
+        
+        setIsLoading(false);
+        navigate("/admin"); // Navigate to admin page
+      }, 1000);
       return;
     }
 
@@ -54,10 +80,10 @@ const Login = () => {
         // Store token and refresh token
         localStorage.setItem("token", data.token);
         localStorage.setItem("refreshToken", data.refreshToken);
-        localStorage.setItem("userid",data.user_id);
-
+        localStorage.setItem("userid", data.user_id);
         // ⭐ Store username in localStorage
         localStorage.setItem("username", username);
+        localStorage.setItem("role", "user"); // Add role for regular users
 
         navigate("/homepage");
       } else {
@@ -92,7 +118,7 @@ const Login = () => {
 
         <form onSubmit={handleLogin}>
           <div className="mb-5">
-            <label className="block mb-1 text-gray-800 text-sm">Username</label>
+            <label className="block mb-1 text-gray-800 text-sm">Username/Email</label>
             <div className="relative">
               <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
@@ -100,7 +126,7 @@ const Login = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
-                placeholder="Enter your username"
+                placeholder="Enter your username or email"
                 className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none"
                 required
               />
@@ -163,7 +189,7 @@ const Login = () => {
             Forgot your password?
           </NavLink>
           <div className="mt-2">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <NavLink
               to="/signup"
               className="text-green-600 font-semibold hover:text-green-800"

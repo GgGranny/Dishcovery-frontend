@@ -474,7 +474,7 @@ const AboutRecipes = () => {
     const profileId = authorId || recipe?.userid;
     
     if (profileId) {
-      navigate(`/userprofile/${profileId}`);
+      navigate(`/userprofile/${profileId}/${recipe.username}`);
     } else if (recipe?.username) {
       // Fallback to username if userid not available
       navigate(`/profile/username/${recipe.username}`);

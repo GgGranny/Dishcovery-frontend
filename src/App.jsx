@@ -79,6 +79,13 @@ import Chat from "./frontend/afterlogin/Chat";
 import CommunityChat from "./frontend/afterlogin/CommunityChat";
 import PremiumPage from "./frontend/afterlogin/PremiumPage";
 import UserProfile from "./frontend/afterlogin/UserProfile";
+import AdminLayout from "./frontend/layout/AdminLayout";
+import Dashboard from "./frontend/admin/Dashboard";
+import Users from "./frontend/admin/Users";
+
+
+
+
 
 
 
@@ -110,8 +117,18 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/community/chat/:id" element={<CommunityChat />} />
           <Route path="/premium" element={<PremiumPage />} />
-          <Route path="/userprofile/:userId" element={<UserProfile />} />
+          <Route path="/userprofile/:userId/:username" element={<UserProfile />} />
         </Route>
+
+        {/*Admin Protected Route*/}
+        {/* <Route element={<AdminProtectedRoute />} > */}
+        <Route path="/admin" element={<AdminLayout />} >
+        <Route index element={<Dashboard />} />
+        <Route path="/admin/users" element={<Users />} />
+        </Route>
+
+
+
       </Routes>
     </BrowserRouter>
   );
