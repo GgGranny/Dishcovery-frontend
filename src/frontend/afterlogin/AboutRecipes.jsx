@@ -25,6 +25,7 @@ import {
   processSimilarRecipes
 } from "../../api/Recipe";
 import axios from "axios";
+import Pdf from "../Pdf";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -577,6 +578,11 @@ const AboutRecipes = () => {
     }
   };
 
+  const handleDownloadRecipe = () => {
+    localStorage.setItem("recipe", JSON.stringify(recipe));
+    window.open(`/pdf`, "_blank")
+  }
+
   // Function to render star ratings for similar recipes
   const renderSimilarRecipeStars = (rating = 0) => {
     const fullStars = Math.floor(rating);
@@ -974,12 +980,15 @@ const AboutRecipes = () => {
               {authorData?.bio || "Sharing delicious recipes with love and passion for cooking."}
             </p>
 
-            <button
-              onClick={navigateToAuthorProfile}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition"
-            >
-              View Author's Profile
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={navigateToAuthorProfile}
+                className="text-xs bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition"
+              >
+                View Author's Profile
+              </button>
+              <button className="text-xs bg-gray-700 hover:bg-gray-500  text-white font-medium py-2 px-6 rounded-lg transition" onClick={handleDownloadRecipe}>Download Recipe </button>
+            </div>
           </div>
 
           {/* Comment Stats */}
