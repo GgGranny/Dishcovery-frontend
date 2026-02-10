@@ -77,6 +77,7 @@ import PaymentSuccess from "./components/PaymentSuccess";
 import Payments from "./components/Payment";
 import Chat from "./frontend/afterlogin/Chat";
 import CommunityChat from "./frontend/afterlogin/CommunityChat";
+import Pdf from "./frontend/Pdf";
 import PremiumPage from "./frontend/afterlogin/PremiumPage";
 import UserProfile from "./frontend/afterlogin/UserProfile";
 import AdminLayout from "./frontend/layout/AdminLayout";
@@ -101,7 +102,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/communities" element={<Communities />} />
         <Route path="/chat" element={<Chat />} />
-
+        <Route path="/pdf" element={<Pdf name="Abhishek" />} />
         {/* 🔐 Protected Routes (NO main page needed) */}
         <Route element={<ProtectedRoute />}>
           <Route path="/homepage" element={<Homepage />} />

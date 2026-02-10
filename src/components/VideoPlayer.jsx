@@ -1,10 +1,25 @@
 import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
 
-const VideoPlayer = ({ src }) => {
+const VideoPlayer = ({ src, handelAdCheck }) => {
     const videoRef = useRef(null);
     const [levels, setLevels] = useState([]);
     const [currentLevel, setCurrentLevel] = useState(-1);
+    const [adUrl, setAdUrl] = useState("");
+
+    useEffect(() => {
+        const fetchAd = async () => {
+            const response = await axios.get("http://localhost:8080/api/ad/v1", {
+                withCredentials: true,
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`
+                }
+            });
+            console.log("response", response);
+            setAdUrl(response.config.url);
+        }
+        fetchAd();
+    }, [])
 
     useEffect(() => {
         if (!src) return;
@@ -29,10 +44,12 @@ const VideoPlayer = ({ src }) => {
             hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
                 setCurrentLevel(data.level);
             });
+
         }
 
         return () => hls && hls.destroy();
     }, [src]);
+
 
     const handleQualityChange = (index) => {
         if (index === -1) {
@@ -44,11 +61,18 @@ const VideoPlayer = ({ src }) => {
         setCurrentLevel(index);
     };
 
+    const handelAdCheck = () => {
+        console.log("this is ad check");
+    }
+
     return (
-        <div className="h-full border border-green-400">
+        <div className="h-full border border-green-400 relative">
+            <div className="overlay absolute w-full h-full cursor-pointer z-10 bg-red-500" />
             <video
+                className="outline-2 outline-green-500 "
                 ref={videoRef}
                 controls
+                onPlay={handelAdCheck}
                 style={{
                     width: "100%",
                     backgroundColor: "black",
