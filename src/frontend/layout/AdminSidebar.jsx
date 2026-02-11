@@ -21,7 +21,7 @@ const AdminSidebar = () => {
   const menuItems = [
     { path: "/admin", icon: <FiHome />, label: "Dashboard", exact: true },
     { path: "/admin/users", icon: <FiUsers />, label: "Users" },
-    { path: "/admin/recipes", icon: <FiBook />, label: "Recipes" },
+    { path: "/admin/adminrecipes", icon: <FiBook />, label: "Recipes" },
     { path: "/admin/discussions", icon: <FiMessageSquare />, label: "Discussions" },
     { path: "/admin/reviews", icon: <FiStar />, label: "Reviews" },
     { path: "/admin/analytics", icon: <HiChartBar />, label: "Analytics" },
