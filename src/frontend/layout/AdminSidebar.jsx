@@ -25,7 +25,7 @@ const AdminSidebar = () => {
     { path: "/admin/discussions", icon: <FiMessageSquare />, label: "Discussions" },
     { path: "/admin/reviews", icon: <FiStar />, label: "Reviews" },
     { path: "/admin/analytics", icon: <HiChartBar />, label: "Analytics" },
-    { path: "/admin/settings", icon: <FiSettings />, label: "Settings" },
+    { path: "/admin/adminsetting", icon: <FiSettings />, label: "Settings" },
   ];
 
   return (

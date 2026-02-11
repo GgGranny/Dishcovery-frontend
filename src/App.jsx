@@ -84,6 +84,8 @@ import AdminLayout from "./frontend/layout/AdminLayout";
 import Dashboard from "./frontend/admin/Dashboard";
 import Users from "./frontend/admin/Users";
 import AdminRecipes from "./frontend/admin/AdminRecipes";
+import AdminSetting from "./frontend/admin/AdminSetting";
+
 
 
 
@@ -128,6 +130,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="/admin/users" element={<Users />} />
           <Route path="/admin/adminrecipes" element={<AdminRecipes />} />
+          <Route path="/admin/adminsetting" element={<AdminSetting />} />
         </Route>
 
 
