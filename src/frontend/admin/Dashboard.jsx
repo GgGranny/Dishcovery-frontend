@@ -76,25 +76,6 @@ const Dashboard = () => {
     { month: 'May', recipes: 142, growth: 14 },
     { month: 'Jun', recipes: 158, growth: 11 }
   ];
-
-  // Platform Growth Chart Data
-  const platformGrowthData = [
-    { name: 'Jan', users: 1200, recipes: 85 },
-    { name: 'Feb', users: 1450, recipes: 92 },
-    { name: 'Mar', users: 1680, recipes: 106 },
-    { name: 'Apr', users: 1920, recipes: 125 },
-    { name: 'May', users: 2150, recipes: 142 },
-    { name: 'Jun', users: 2380, recipes: 158 }
-  ];
-
-  // User Distribution Pie Chart
-  const userDistributionData = [
-    { name: 'Active Cooks', value: 45, color: '#3B82F6' },
-    { name: 'Recipe Creators', value: 25, color: '#10B981' },
-    { name: 'Community Members', value: 20, color: '#8B5CF6' },
-    { name: 'Premium Users', value: 10, color: '#F59E0B' }
-  ];
-
   // Recent Activities (from image)
   const recentActivities = [
     {
@@ -367,89 +348,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Additional Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Platform Growth Chart */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-800">Platform Growth Trend</h3>
-              <p className="text-gray-500 text-sm">Users vs Recipes comparison</p>
-            </div>
-            <HiOutlineChartBar className="text-2xl text-gray-400" />
-          </div>
-          
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={platformGrowthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#6b7280' }}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#6b7280' }}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="recipes" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* User Distribution Chart */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-800">User Distribution</h3>
-              <p className="text-gray-500 text-sm">User types on platform</p>
-            </div>
-            <HiOutlineChartPie className="text-2xl text-gray-400" />
-          </div>
-          
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={userDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {userDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
 
       {/* Recent Activity & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

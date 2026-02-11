@@ -37,19 +37,6 @@ const Login = () => {
     if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
       // Admin login
       setIsLoading(true);
-      
-      // Simulate API delay
-      setTimeout(() => {
-        // Store admin data in localStorage
-        localStorage.setItem("token", "admin_token");
-        localStorage.setItem("refreshToken", "admin_refresh_token");
-        localStorage.setItem("userid", "admin_001");
-        localStorage.setItem("username", "Admin");
-        localStorage.setItem("role", "admin"); // Add role for admin
-        
-        setIsLoading(false);
-        navigate("/admin"); // Navigate to admin page
-      }, 1000);
       return;
     }
 
