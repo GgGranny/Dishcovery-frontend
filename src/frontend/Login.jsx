@@ -37,7 +37,7 @@ const Login = () => {
     if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
       // Admin login
       setIsLoading(true);
-      
+
       // Simulate API delay
       setTimeout(() => {
         // Store admin data in localStorage
@@ -46,7 +46,7 @@ const Login = () => {
         localStorage.setItem("userid", "admin_001");
         localStorage.setItem("username", "Admin");
         localStorage.setItem("role", "admin"); // Add role for admin
-        
+
         setIsLoading(false);
         navigate("/admin"); // Navigate to admin page
       }, 1000);
@@ -82,10 +82,15 @@ const Login = () => {
         localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("userid", data.user_id);
         // ⭐ Store username in localStorage
+        // ⭐ Store username in localStorage
         localStorage.setItem("username", username);
-        localStorage.setItem("role", "user"); // Add role for regular users
+        localStorage.setItem("Role", data.role)
+        if (data.role === "ADMIN") {
+          navigate("/admin");
+        } else {
 
-        navigate("/homepage");
+          navigate("/homepage");
+        }
       } else {
         alert("Invalid credentials");
       }
