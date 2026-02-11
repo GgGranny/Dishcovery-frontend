@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiStar, FiPlusCircle, FiX } from 'react-icons/fi';
 
+const API_BASE_URL = 'http://localhost:8080';
+
 const AdminRecipes = () => {
+  // ---------- Recipe state ----------
   const [recipes, setRecipes] = useState([]);
   const [filteredRecipes, setFilteredRecipes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,7 +15,6 @@ const AdminRecipes = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecipes, setTotalRecipes] = useState(0);
-  const [token, setToken] = useState('');
 
   // ---------- Action loading states ----------
   const [actionLoading, setActionLoading] = useState({});
@@ -20,22 +22,29 @@ const AdminRecipes = () => {
   // ---------- Modal state for Add Ad ----------
   const [isAdModalOpen, setIsAdModalOpen] = useState(false);
   const [selectedRecipeId, setSelectedRecipeId] = useState(null);
-  const [adVideoFile, setAdVideoFile] = useState(null); // ✅ only video file
+  const [adVideoFile, setAdVideoFile] = useState(null);
 
-  // Get token from localStorage
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    setToken(storedToken);
-  }, []);
+  // ---------- Token validation (prevents 431, handles expiry) ----------
+  const validateToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Authentication token not found. Please log in again.');
+      return null;
+    }
+    if (token.length > 4000) {
+      setError('Token too large. Please log out and log in again.');
+      localStorage.removeItem('token');
+      return null;
+    }
+    return token;
+  };
 
-  // ---------- Helper: fill missing fields with mock data ----------
+  // ---------- Helper: fill missing fields with mock data (fallback only) ----------
   const generateMockData = (recipeId) => {
     const difficulties = ['Easy', 'Medium', 'Hard'];
-    const authors = ['Sarah Chen', 'Emma Wilson', 'David Kim', 'Michael Rodriguez', 'Olivia Thompson'];
     const seed = recipeId || Math.floor(Math.random() * 1000);
     return {
       date: new Date().toISOString().split('T')[0],
-      author: authors[seed % authors.length],
       difficulty: difficulties[seed % difficulties.length],
       rating: (4.0 + (seed % 10) * 0.1).toFixed(1),
       views: 500 + (seed * 123) % 2500,
@@ -55,18 +64,24 @@ const AdminRecipes = () => {
       return `data:image/jpeg;base64,${thumbnail}`;
     }
 
-    if (thumbnail.startsWith('/')) return `http://localhost:8080${thumbnail}`;
+    if (thumbnail.startsWith('/')) return `${API_BASE_URL}${thumbnail}`;
     return thumbnail;
   };
 
-  // ---------- Fetch recipes ----------
+  // ---------- Fetch recipes (with pagination) ----------
   const fetchRecipes = async (page = 1, size = 10) => {
+    const token = validateToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      if (!token) throw new Error('No authentication token found. Please log in.');
+      setError(null);
 
       const response = await axios.get(
-        `http://localhost:8080/api/recipes/recipe?page=${page}&size=${size}`,
+        `${API_BASE_URL}/api/recipes/recipe?page=${page}&size=${size}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -99,15 +114,17 @@ const AdminRecipes = () => {
         totalRecipesCount = recipesData.length;
       }
 
+      // Transform recipes – no author field
       const transformedRecipes = recipesData.map((recipe, index) => {
         const mock = generateMockData(recipe.recipeId || index + 1);
+        const recipeId = recipe.recipeId || index + 1;
+
         return {
-          id: recipe.recipeId || index + 1,
+          id: recipeId,
           name: recipe.recipeName || recipe.name || `Recipe ${index + 1}`,
           description: recipe.description || 'No description available',
           thumbnail: recipe.thumbnail || null,
           date: recipe.createdDate || recipe.date || mock.date,
-          author: recipe.author || recipe.creator || recipe.userName || mock.author,
           category: recipe.category || recipe.type || 'Uncategorized',
           difficulty: recipe.difficulty || recipe.level || mock.difficulty,
           rating: parseFloat(recipe.rating || recipe.averageRating || mock.rating),
@@ -124,22 +141,28 @@ const AdminRecipes = () => {
       setFilteredRecipes(transformedRecipes);
       setTotalPages(totalPagesCount);
       setTotalRecipes(totalRecipesCount);
-      setLoading(false);
-      setError(null);
     } catch (err) {
       console.error('Error fetching recipes:', err);
-      setError(`Failed to fetch recipes: ${err.response?.data?.message || err.message}`);
-      setLoading(false);
-
-      if (recipes.length === 0) {
-        setRecipes(getMockRecipes());
-        setFilteredRecipes(getMockRecipes());
-        setTotalRecipes(getMockRecipes().length);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        setError('Session expired. Please log in again.');
+      } else {
+        setError(`Failed to fetch recipes: ${err.response?.data?.message || err.message}`);
       }
+
+      // Only use mock data if we have no recipes at all
+      if (recipes.length === 0) {
+        const mockRecipes = getMockRecipes();
+        setRecipes(mockRecipes);
+        setFilteredRecipes(mockRecipes);
+        setTotalRecipes(mockRecipes.length);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ---------- Mock recipes ----------
+  // ---------- Mock recipes (fallback, no author) ----------
   const getMockRecipes = () => [
     {
       id: 1,
@@ -147,7 +170,6 @@ const AdminRecipes = () => {
       description: 'A delicious Thai dish with basil and chicken',
       thumbnail: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80',
       date: '2024-01-15',
-      author: 'Sarah Chen',
       category: 'Asian',
       difficulty: 'Medium',
       rating: 4.8,
@@ -163,7 +185,6 @@ const AdminRecipes = () => {
       description: 'Decadent chocolate cake with molten center',
       thumbnail: 'https://images.unsplash.com/photo-1624353365286-3f8d62dadadf?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80',
       date: '2024-01-14',
-      author: 'Emma Wilson',
       category: 'Desserts',
       difficulty: 'Hard',
       rating: 4.9,
@@ -175,9 +196,15 @@ const AdminRecipes = () => {
     }
   ];
 
+  // ---------- Initial fetch ----------
   useEffect(() => {
-    if (token) fetchRecipes(currentPage, pageSize);
-  }, [currentPage, pageSize, token]);
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchRecipes(currentPage, pageSize);
+    } else {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize]);
 
   // ---------- Search filter ----------
   useEffect(() => {
@@ -187,7 +214,6 @@ const AdminRecipes = () => {
       const q = searchQuery.toLowerCase();
       setFilteredRecipes(recipes.filter(r =>
         r.name.toLowerCase().includes(q) ||
-        r.author.toLowerCase().includes(q) ||
         r.category.toLowerCase().includes(q) ||
         (r.description && r.description.toLowerCase().includes(q)) ||
         (r.cuisine && r.cuisine.toLowerCase().includes(q))
@@ -201,18 +227,22 @@ const AdminRecipes = () => {
   const handleDeleteRecipe = async (recipeId) => {
     if (!window.confirm('Are you sure you want to delete this recipe?')) return;
 
+    const token = validateToken();
+    if (!token) return;
+
     try {
       setActionLoading(prev => ({ ...prev, [`delete-${recipeId}`]: true }));
+      // Optimistic update
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
 
       await axios.delete(
-        `http://localhost:8080/api/recipes/recipe/${recipeId}`,
+        `${API_BASE_URL}/api/recipes/recipe/${recipeId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
     } catch (err) {
       console.error('Error deleting recipe:', err);
       alert(`Failed to delete recipe: ${err.response?.data?.message || err.message}`);
-      fetchRecipes(currentPage, pageSize);
+      fetchRecipes(currentPage, pageSize); // revert optimistic update
     } finally {
       setActionLoading(prev => ({ ...prev, [`delete-${recipeId}`]: false }));
     }
@@ -262,7 +292,7 @@ const AdminRecipes = () => {
   // ---------- Add Advertisement – open modal ----------
   const openAddAdModal = (recipeId) => {
     setSelectedRecipeId(recipeId);
-    setAdVideoFile(null); // ✅ reset only video file
+    setAdVideoFile(null);
     setIsAdModalOpen(true);
   };
 
@@ -270,13 +300,11 @@ const AdminRecipes = () => {
   const handleVideoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file type
       if (!file.type.startsWith('video/')) {
         alert('Please upload a valid video file (MP4, WebM, Ogg, etc.)');
         e.target.value = null;
         return;
       }
-      // Check file size (max 50MB)
       if (file.size > 50 * 1024 * 1024) {
         alert('Video file must be less than 50MB.');
         e.target.value = null;
@@ -288,19 +316,19 @@ const AdminRecipes = () => {
     }
   };
 
-  // ---------- Submit Ad (only video file) ----------
+  // ---------- Submit Ad – NO AUTOMATIC REDIRECTS ----------
   const handleSubmitAd = async (e) => {
     e.preventDefault();
 
-    // ✅ Require video file
     if (!adVideoFile) {
       alert('Please select a video file.');
       return;
     }
 
-    const currentToken = localStorage.getItem('token');
-    if (!currentToken) {
-      alert('You are not logged in.');
+    const token = validateToken();
+    if (!token) {
+      alert('Authentication failed. Please log in again.');
+      // ❌ No redirect – just alert
       return;
     }
 
@@ -308,26 +336,36 @@ const AdminRecipes = () => {
 
     const formData = new FormData();
     formData.append('recipeId', selectedRecipeId);
-    formData.append('video', adVideoFile); // ✅ only video file is sent
+    formData.append('video', adVideoFile);
 
     try {
       await axios.post(
-        'http://localhost:8080/api/ad/v1',
+        `${API_BASE_URL}/api/ad/v1`,
         formData,
         {
           headers: {
-            Authorization: `Bearer ${currentToken}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          maxRedirects: 0 // ⛔ CRITICAL: stops automatic redirect to login page
         }
       );
       alert(`Video advertisement added for recipe ${selectedRecipeId}!`);
-      // Reset and close modal
       setAdVideoFile(null);
       setIsAdModalOpen(false);
     } catch (err) {
       console.error('Error adding ad:', err);
-      alert(`Failed to add ad: ${err.response?.data?.message || err.message}`);
+      if (err.response?.status === 401) {
+        alert('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        // ❌ No redirect – user stays on page
+      } else if (err.response?.status === 302 || err.message?.includes('redirect')) {
+        alert('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        // ❌ No redirect – user stays on page
+      } else {
+        alert(`Failed to add ad: ${err.response?.data?.message || err.message}`);
+      }
     } finally {
       setActionLoading(prev => ({ ...prev, [`ad-${selectedRecipeId}`]: false }));
     }
@@ -384,7 +422,7 @@ const AdminRecipes = () => {
   };
 
   // --- AUTH / LOADING / ERROR states ---
-  if (!token) {
+  if (!localStorage.getItem('token')) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-yellow-200 max-w-md text-center">
@@ -450,7 +488,7 @@ const AdminRecipes = () => {
             </div>
             <input
               type="text"
-              placeholder="Search recipes, authors, or categories..."
+              placeholder="Search recipes, categories, or cuisines..."
               value={searchQuery}
               onChange={handleSearchChange}
               className="pl-10 pr-4 py-3 w-full md:w-80 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
@@ -512,7 +550,6 @@ const AdminRecipes = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RECIPE</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AUTHOR</th>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CATEGORY</th>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIFFICULTY</th>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RATING</th>
@@ -551,9 +588,6 @@ const AdminRecipes = () => {
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-900 font-medium">{recipe.author}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-blue-100 text-blue-800">
@@ -649,7 +683,7 @@ const AdminRecipes = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center">
+                  <td colSpan="7" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -750,7 +784,6 @@ const AdminRecipes = () => {
                 </div>
 
                 <form onSubmit={handleSubmitAd}>
-                  {/* ✅ Only video file input */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Video File *

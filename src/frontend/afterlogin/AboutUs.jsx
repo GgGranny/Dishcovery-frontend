@@ -128,7 +128,7 @@ const AboutUs = () => {
           {[
             { name: "Aryan Maharjan", role: "Frontend & Leader", initials: "AM" },
             { name: "Abhishek Rai", role: "Backend Developer", initials: "AR" },
-            { name: "Nirjal Phasi", role: "QA", initials: "NP" },
+            { name: "Nirjal Phashi", role: "QA", initials: "NP" },
             { name: "Sagish Maharjan", role: "UI/UX Designer", initials: "SM" },
           ].map((member, index) => (
             <div
