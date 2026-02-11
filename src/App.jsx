@@ -83,6 +83,7 @@ import UserProfile from "./frontend/afterlogin/UserProfile";
 import AdminLayout from "./frontend/layout/AdminLayout";
 import Dashboard from "./frontend/admin/Dashboard";
 import Users from "./frontend/admin/Users";
+import AdminRecipes from "./frontend/admin/AdminRecipes";
 
 
 
@@ -102,7 +103,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/communities" element={<Communities />} />
         <Route path="/chat" element={<Chat />} />
-        <Route path="/pdf" element={<Pdf name="Abhishek" />} />
+        <Route path="/pdf" element={<Pdf />} />
         {/* 🔐 Protected Routes (NO main page needed) */}
         <Route element={<ProtectedRoute />}>
           <Route path="/homepage" element={<Homepage />} />
@@ -124,8 +125,9 @@ function App() {
         {/*Admin Protected Route*/}
         {/* <Route element={<AdminProtectedRoute />} > */}
         <Route path="/admin" element={<AdminLayout />} >
-        <Route index element={<Dashboard />} />
-        <Route path="/admin/users" element={<Users />} />
+          <Route index element={<Dashboard />} />
+          <Route path="/admin/users" element={<Users />} />
+          <Route path="/admin/adminrecipes" element={<AdminRecipes />} />
         </Route>
 
 

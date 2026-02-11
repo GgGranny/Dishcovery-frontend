@@ -1,63 +1,59 @@
-import React, { useState } from "react";
-import img1 from "../assets/food1.png";
-import img2 from "../assets/food2.png";
-import img3 from "../assets/food3.png";
-import img4 from "../assets/food4.png";
-import img5 from "../assets/food5.png";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const TrendingSection = () => {
-  const cards = [
-    {
-      id: 1,
-      image: img1,
-      title: "Newari Khaja Set",
-      desc: "A combination of beaten rice, spiced meat, egg, and pickles.",
-      time: "40 min",
-      author: "Aryan Maharjan",
-      rating: "4.9",
-    },
-    {
-      id: 2,
-      image: img2,
-      title: "Jhol Momo",
-      desc: "Steamed dumplings with jhol and spicy chutney.",
-      time: "30 min",
-      author: "Abishek Rai",
-      rating: "4.7",
-    },
-    {
-      id: 3,
-      image: img3,
-      title: "Yomari",
-      desc: "Rice dumpling stuffed with chaku or khuwa.",
-      time: "20 min",
-      author: "Nirjal Phasi",
-      rating: "4.6",
-    },
-    {
-      id: 4,
-      image: img4,
-      title: "Burger",
-      desc: "Juicy patty with cheese and veggies.",
-      time: "25 min",
-      author: "Sagish Maharjan",
-      rating: "4.8",
-    },
-    {
-      id: 5,
-      image: img5,
-      title: "White Sauce Pasta",
-      desc: "Creamy white sauce pasta with herbs.",
-      time: "15 min",
-      author: "Kenji Tanaka",
-      rating: "4.9",
-    },
-  ];
-
+  const navigate = useNavigate();
+  const [recipes, setRecipes] = useState([]);
   const [index, setIndex] = useState(0);
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(6);
   const visibleCards = 3;
-  const maxIndex = Math.max(0, cards.length - visibleCards);
 
+  const maxIndex = Math.max(0, recipes.length - visibleCards);
+
+  useEffect(() => {
+    const fetchTrendingRecipes = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:8080/api/recipes/recipe/featured-recipes?page=${page}&size=${size}`,
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        console.log(response);
+
+        // Spring Data Page or plain array
+        const data = response.data.content || response.data;
+
+        const mappedRecipes = data.map((recipe) => ({
+          id: recipe.recipeId,
+          image: recipe.thumbnail
+            ? `data:image/jpeg;base64,${recipe.thumbnail}`
+            : "/placeholder.jpg",
+          title: recipe.recipeName,
+          desc: recipe.description,
+          time: `${recipe.cookTime} min`,
+          author: recipe.username,
+          rating: "4.5", // You can replace this with actual rating if exists
+        }));
+
+        setRecipes(mappedRecipes);
+      } catch (error) {
+        console.error("Failed to fetch featured recipes", error);
+      }
+    };
+
+    fetchTrendingRecipes();
+  }, [page, size]);
+
+
+  useEffect(() => {
+    console.log(" recipe: ", recipes);
+  }, [recipes])
   return (
     <section className="text-center py-16 px-4 bg-white">
       <h2 className="text-3xl font-bold">Trending This Week</h2>
@@ -81,37 +77,35 @@ const TrendingSection = () => {
             className="flex transition-transform duration-500"
             style={{ transform: `translateX(-${index * (100 / visibleCards)}%)` }}
           >
-            {cards.map((card) => (
-              <div
-                key={card.id}
-                className="flex-none w-full md:w-1/2 lg:w-1/3 px-4"
-              >
-                <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition hover:-translate-y-1">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    className="w-full h-48 object-cover"
-                  />
+            {recipes.length === 0 ? (
+              <p className="text-gray-500">Loading trending recipes...</p>
+            ) : (
+              recipes.map((card) => (
+                <div key={card.id} className="flex-none w-full md:w-1/2 lg:w-1/3 px-4" onClick={() => navigate(`/aboutrecipes/${card.id}`)}>
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition hover:-translate-y-1">
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="w-full h-48 object-cover"
+                    />
 
-                  <div className="p-5 text-left">
-                    <h3 className="text-lg font-semibold">{card.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {card.desc}
-                    </p>
+                    <div className="p-5 text-left">
+                      <h3 className="text-lg font-semibold">{card.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{card.desc}</p>
 
-                    {/* Time + Author (left) | Rating (right) */}
-                    <div className="flex justify-between items-start text-xs text-gray-700 mt-3">
-                      <div className="flex flex-col gap-1">
-                        <span>⏱ {card.time}</span>
-                        <span>👨‍🍳 {card.author}</span>
+                      {/* Time + Author | Rating */}
+                      <div className="flex justify-between items-start text-xs text-gray-700 mt-3">
+                        <div className="flex flex-col gap-1">
+                          <span>⏱ {card.time}</span>
+                          <span>👨‍🍳 {card.author}</span>
+                        </div>
+                        <span className="font-semibold">⭐ {card.rating}</span>
                       </div>
-
-                      <span className="font-semibold">⭐ {card.rating}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useReducer, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Homenavbar from "../../components/Homenavbar";
 import Footer from "../../components/Footer";
 import { FaStar, FaRegStar, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { AiFillFire } from "react-icons/ai";
 import { GiKnifeFork } from "react-icons/gi";
+import Hls from "hls.js";
 
 // Import API functions
 import {
@@ -23,6 +24,8 @@ import {
   getSimilarRecipes,
   processSimilarRecipes
 } from "../../api/Recipe";
+import axios from "axios";
+import Pdf from "../Pdf";
 
 const AboutRecipes = () => {
   const { id } = useParams();
@@ -47,6 +50,8 @@ const AboutRecipes = () => {
   const [loadingSimilarRecipes, setLoadingSimilarRecipes] = useState(false);
   const [similarRecipesError, setSimilarRecipesError] = useState("");
 
+
+
   const token = localStorage.getItem("token");
   const username = localStorage.getItem("username") || "User";
   const currentUserId = localStorage.getItem("userid");
@@ -54,7 +59,7 @@ const AboutRecipes = () => {
   // Helper function for fallback author data
   const getFallbackAuthorData = (recipeData) => {
     const authorName = recipeData?.username || "Recipe Author";
-    
+
     return {
       displayName: authorName,
       bio: "Passionate about creating delicious and healthy recipes"
@@ -114,7 +119,7 @@ const AboutRecipes = () => {
     setProfileLoading(true);
     try {
       const response = await getUserProfilePicture(userid);
-      
+
       if (response && response.data && response.data !== "no user profile") {
         const pictureUrl = processProfilePicture(response.data);
         setProfilePictureUrl(pictureUrl);
@@ -134,15 +139,15 @@ const AboutRecipes = () => {
   // SIMPLIFIED: Use recipe data directly for author info
   const setupAuthorData = (recipeData) => {
     if (!recipeData) return;
-    
+
     // Create author data directly from recipe
     const authorInfo = {
       displayName: recipeData.username || "Recipe Author",
       bio: "Food enthusiast sharing delicious recipes"
     };
-    
+
     setAuthorData(authorInfo);
-    
+
     // Try to fetch profile picture if userid exists
     if (recipeData.userid) {
       setAuthorId(recipeData.userid);
@@ -169,17 +174,17 @@ const AboutRecipes = () => {
 
       try {
         const data = await getRecipeById(id);
-        
+
         if (!data || Object.keys(data).length === 0) {
           throw new Error("Recipe data is empty");
         }
-        
+
         const cleanSteps = parseSteps(data.steps);
 
         // Handle video
         if (data.videoId) {
           setVideoUrl(getVideoStreamUrl(data.videoId));
-          
+
           const videoMetadata = getVideoMetadata(data.video, data.recipeName);
           setVideoTitle(videoMetadata.title);
           setVideoDescription(videoMetadata.description);
@@ -196,7 +201,7 @@ const AboutRecipes = () => {
 
       } catch (err) {
         console.error("Recipe fetch error:", err);
-        
+
         if (err.response) {
           switch (err.response.status) {
             case 401:
@@ -228,73 +233,219 @@ const AboutRecipes = () => {
     fetchRecipe();
   }, [id, token, navigate]);
 
-  // Custom VideoPlayer component
+  // custom video player
   const VideoPlayer = ({ src, title }) => {
-    const videoRef = React.useRef(null);
-    const [videoError, setVideoError] = React.useState(false);
-    
-    React.useEffect(() => {
-      if (src && videoRef.current) {
-        setVideoError(false);
-        videoRef.current.load();
-      }
-    }, [src]);
 
-    const handleVideoError = (e) => {
-      console.error("Video loading error:", e);
-      setVideoError(true);
+    const DEFAULT_COUNTDOWN_SECONDS = 10;
+    const API_AD_ENDPOINT = "http://localhost:8080/api/ad/v1";
+    // Refs
+    const videoRef = useRef(null);
+
+    // State - Video playback
+    const [videoError, setVideoError] = useState(false);
+    const [showOverlay, setShowOverlay] = useState(true);
+
+    // State - Ad management
+    const [adUrl, setAdUrl] = useState("");
+    const [isPlayingAd, setIsPlayingAd] = useState(false);
+    const [skipCountdown, setSkipCountdown] = useState(DEFAULT_COUNTDOWN_SECONDS);
+    const [canSkip, setCanSkip] = useState(false);
+
+    // Effect: Fetch ad on component mount
+    useEffect(() => {
+      const fetchAd = async () => {
+        try {
+          const response = await axios.get(API_AD_ENDPOINT, {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`
+            },
+            responseType: 'blob', // Important: Handle binary video data
+          });
+
+          if (response.data && response.data.size > 0) {
+            // Create object URL from blob for video playback
+            const videoBlob = new Blob([response.data], {
+              type: response.headers['content-type'] || 'video/mp4'
+            });
+            const videoBlobUrl = URL.createObjectURL(videoBlob);
+            setAdUrl(videoBlobUrl);
+          }
+        } catch (err) {
+          console.error("Failed to fetch ad:", err);
+          // Silently fail - video will play without ad
+        }
+      };
+
+      fetchAd();
+
+      // Cleanup: Revoke blob URL when component unmounts
+      return () => {
+        if (adUrl) {
+          URL.revokeObjectURL(adUrl);
+        }
+      };
+    }, []);
+
+    // Effect: Handle countdown timer for ad skip functionality
+    useEffect(() => {
+      if (!isPlayingAd) return;
+
+      if (skipCountdown > 0) {
+        const timer = setTimeout(() => {
+          setSkipCountdown(prev => prev - 1);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      } else {
+        setCanSkip(true);
+      }
+    }, [isPlayingAd, skipCountdown]);
+
+    // Handler: Start video playback (with or without ad)
+    const startVideo = (playAd = true) => {
+      setShowOverlay(false);
+
+      const video = videoRef.current;
+      if (!video) {
+        console.error("Video element not found");
+        return;
+      }
+
+      if (playAd && adUrl) {
+        playAdVideo(video);
+      } else {
+        playMainVideo(video);
+      }
     };
 
-    const handleVideoLoadStart = () => {
-      setTimeout(() => {
-        if (videoRef.current && videoRef.current.readyState === 0) {
-          setVideoError(true);
-        }
-      }, 5000);
+    // Helper: Play advertisement video
+    const playAdVideo = (video) => {
+      setIsPlayingAd(true);
+      setSkipCountdown(DEFAULT_COUNTDOWN_SECONDS);
+      setCanSkip(false);
+
+      video.src = adUrl;
+      video.controls = false;
+      video.muted = true; // Prevent autoplay block in browsers
+      video.load();
+
+      video.oncanplay = () => {
+        video.play().catch((error) => {
+          console.error("Autoplay failed:", error);
+          setShowOverlay(true); // Show overlay if autoplay blocked
+        });
+      };
+    };
+
+    // Helper: Play main content video
+    const playMainVideo = (video) => {
+      setIsPlayingAd(false);
+
+      video.src = src;
+      video.controls = true;
+      video.muted = false;
+      video.load();
+
+      video.play().catch((error) => {
+        console.error("Video playback failed:", error);
+        setShowOverlay(true);
+      });
+    };
+
+    // Handler: Skip ad and play main video
+    const handleSkipAd = () => {
+      if (!canSkip) return;
+      startVideo(false);
+    };
+
+    // Handler: Video ended - transition from ad to main video
+    const handleVideoEnded = () => {
+      if (isPlayingAd) {
+        startVideo(false); // Play main video after ad ends
+      }
+    };
+
+    // Handler: Retry video loading after error
+    const handleRetry = () => {
+      setVideoError(false);
+      setShowOverlay(true);
     };
 
     return (
-      <div className="video-container">
-        {src ? (
-          <>
-            <video
-              ref={videoRef}
-              controls
-              className="w-full h-64 md:h-96 rounded-lg"
-              onError={handleVideoError}
-              onLoadStart={handleVideoLoadStart}
-              preload="metadata"
-              crossOrigin="anonymous"
-            >
-              <source src={src} type="application/x-mpegURL" />
-              Your browser does not support the video tag.
-            </video>
-            
-            {videoError && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm">
-                  Video cannot be loaded. The video might be unavailable or you may not have permission to view it.
-                </p>
-                <button
-                  onClick={() => setVideoError(false)}
-                  className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Try again
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <GiKnifeFork className="text-gray-400 text-4xl mx-auto mb-4" />
-              <p className="text-gray-600">No video available for this recipe.</p>
+      <div className="video-container relative">
+        <video
+          ref={videoRef}
+          className="w-full h-64 md:h-96 rounded-lg"
+          onEnded={handleVideoEnded}
+          onError={() => setVideoError(true)}
+          aria-label={title || "Video player"}
+        />
+
+        {/* Play button overlay */}
+        {showOverlay && !videoError && (
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer z-10 rounded-lg"
+            onClick={() => startVideo(true)}
+            role="button"
+            aria-label="Play video"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startVideo(true);
+              }
+            }}
+          >
+            <div className="bg-green-500 hover:bg-green-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-colors">
+              <svg
+                className="w-8 h-8 ml-1"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path d="M6 4l12 6-12 6V4z" />
+              </svg>
             </div>
+          </div>
+        )}
+
+        {/* Skip ad button */}
+        {isPlayingAd && (
+          <div className="absolute top-4 right-4 z-20">
+            <button
+              disabled={!canSkip}
+              onClick={handleSkipAd}
+              className={`px-4 py-2 rounded bg-green-500 text-white text-sm font-medium shadow transition-colors ${canSkip
+                ? "hover:bg-green-600 cursor-pointer"
+                : "opacity-60 cursor-not-allowed"
+                }`}
+              aria-label={canSkip ? "Skip advertisement" : `Skip available in ${skipCountdown} seconds`}
+            >
+              {canSkip ? "Skip Ad" : `Skip in ${skipCountdown}s`}
+            </button>
+          </div>
+        )}
+
+        {/* Video error message */}
+        {videoError && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm font-medium">
+              Video cannot be loaded. The video might be unavailable or the format may not be supported.
+            </p>
+            <button
+              onClick={handleRetry}
+              className="mt-2 text-sm text-red-600 underline hover:text-red-700 transition-colors"
+            >
+              Try again
+            </button>
           </div>
         )}
       </div>
     );
   };
+
+
 
   // Fetch comments
   const fetchComments = async () => {
@@ -403,9 +554,9 @@ const AboutRecipes = () => {
       fetchComments();
     } catch (err) {
       console.error("Failed to post comment:", err);
-      
+
       let errorMessage = "Failed to post comment. Please try again.";
-      
+
       if (err.response) {
         if (err.response.status === 401) {
           errorMessage = "You need to be logged in to post comments.";
@@ -420,12 +571,17 @@ const AboutRecipes = () => {
       } else if (err.request) {
         errorMessage = "Network error. Please check your connection.";
       }
-      
+
       alert(errorMessage);
     } finally {
       setPostingComment(false);
     }
   };
+
+  const handleDownloadRecipe = () => {
+    localStorage.setItem("recipe", JSON.stringify(recipe));
+    window.open(`/pdf`, "_blank")
+  }
 
   // Function to render star ratings for similar recipes
   const renderSimilarRecipeStars = (rating = 0) => {
@@ -472,7 +628,7 @@ const AboutRecipes = () => {
   const navigateToAuthorProfile = () => {
     // Use authorId if available, otherwise use recipe.userid
     const profileId = authorId || recipe?.userid;
-    
+
     if (profileId) {
       navigate(`/userprofile/${profileId}/${recipe.username}`);
     } else if (recipe?.username) {
@@ -517,6 +673,10 @@ const AboutRecipes = () => {
       </div>
     );
 
+
+  const handelAdCheck = () => {
+    console.log("hello there")
+  }
   return (
     <div className="w-full min-h-screen bg-white text-gray-900">
       <Homenavbar />
@@ -614,7 +774,7 @@ const AboutRecipes = () => {
             {activeTab === "video" && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h2 className="font-semibold mb-4 text-lg">Video Tutorial</h2>
-                
+
                 {/* Video Player */}
                 <VideoPlayer src={videoUrl} title={videoTitle} />
 
@@ -820,12 +980,15 @@ const AboutRecipes = () => {
               {authorData?.bio || "Sharing delicious recipes with love and passion for cooking."}
             </p>
 
-            <button 
-              onClick={navigateToAuthorProfile}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded-lg transition"
-            >
-              View Author's Profile
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={navigateToAuthorProfile}
+                className="text-xs bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition"
+              >
+                View Author's Profile
+              </button>
+              <button className="text-xs bg-gray-700 hover:bg-gray-500  text-white font-medium py-2 px-6 rounded-lg transition" onClick={handleDownloadRecipe}>Download Recipe </button>
+            </div>
           </div>
 
           {/* Comment Stats */}
@@ -927,7 +1090,7 @@ const AboutRecipes = () => {
                 </button>
               </div>
             )}
-            
+
             {/* View All Recipes Button */}
             <div className="mt-6 pt-4 border-t border-gray-100">
               <button
@@ -942,7 +1105,7 @@ const AboutRecipes = () => {
       </div>
 
       <Footer />
-    </div>
+    </div >
   );
 };
 
